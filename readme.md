@@ -1,19 +1,43 @@
-# Typescript Starter
+# SaKota
 
-A bare minimum starter repository for writing and testing browser modules using typescript.
+SaKota proxies js objects and records all changes made on an object without modifying the given object.
 
 ## Getting Started
 
-- Clone this repository
+Install @creately/sakota module from npm.
 
 ```shell
-git clone https://github.com/creately/ts-starter.git my-module
+npm install @creately/sakota
 ```
 
-## Updating Dependencies
+Wrap an existing object with a proxy and make some changes to the proxied object.
+It should reflect all changes made to the object without modifying the source.
 
-Pull new commits from this repository to your own repository for updates.
+```js
+import { Sakota } from '@creately/sakota'
 
-```shell
-git pull https://github.com/creately/ts-starter.git
+const source = { x: 10, y: 20, c1: { x: 20, y: 30, z: 40 }}
+const proxy = Sakota.create(source);
+
+// make some changes
+proxy.z = 30;
+proxy.c1.y = 40;
+delete proxy.c1.z;
+
+console.log(source)
+// { x: 10, y: 20, c1: { x: 20, y: 30, z: 40 }}
+
+console.log(proxy)
+// { x: 10, y: 20, z: 30, c1: { x: 20, y: 40 }}
+```
+
+Changes made to the object are all recorded as a MongoDB like modifier.
+
+```js
+const changes = Sakota.changes(proxy);
+console.log(changes)
+// {
+//     $set: { z: 30, 'c1.y': 40 },
+//     $unset: { 'c1.z': true },
+// }
 ```

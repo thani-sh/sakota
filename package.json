@@ -1,7 +1,7 @@
 {
-  "name": "ts-starter",
+  "name": "@creately/sakota",
   "version": "0.0.0",
-  "description": "",
+  "description": "Proxies js objects and records all changes made on an object without modifying the object.",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "scripts": {
@@ -13,7 +13,7 @@
     "test:cover": "npm run test && open coverage/index.html",
     "prepublish": "npm run clean && npm run lint && npm run build"
   },
-  "author": "Anonymous",
+  "author": "Muhammed Thanish <mnmtanish@gmail.com> (http://thanish.me/)",
   "license": "MIT",
   "devDependencies": {
     "@types/jasmine": "^2.8.9",
