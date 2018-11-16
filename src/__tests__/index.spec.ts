@@ -410,4 +410,87 @@ describe('Sakota', () => {
       });
     });
   });
+
+  describe('multiple proxies', () => {
+    let target0: any;
+    let target1: any;
+    let target2: any;
+
+    beforeEach(() => {
+      const source = {
+        a: undefined,
+        b: null,
+        c: true,
+        d: false,
+        e: 12345,
+        f: 'abcd',
+        g: { a: 1, b: { c: 2 } },
+        h: [1, 2, 3, 4],
+      };
+      target0 = Sakota.create(source);
+      target1 = Sakota.create(target0);
+      target2 = Sakota.create(target1);
+    });
+
+    it('should not change any existing values', () => {
+      [target0, target1, target2].forEach(target => {
+        expect(target).toEqual({
+          a: undefined,
+          b: null,
+          c: true,
+          d: false,
+          e: 12345,
+          f: 'abcd',
+          g: { a: 1, b: { c: 2 } },
+          h: [1, 2, 3, 4],
+        });
+      });
+    });
+
+    it('should record and reflect changes on each level', () => {
+      target0.a = 'A0';
+      target1.b = 'B1';
+      target2.b = 'B2';
+      target2.c = 'C2';
+      expect(target0).toEqual({
+        a: 'A0',
+        b: null,
+        c: true,
+        d: false,
+        e: 12345,
+        f: 'abcd',
+        g: { a: 1, b: { c: 2 } },
+        h: [1, 2, 3, 4],
+      });
+      expect(target0.__sakota__.getChanges()).toEqual({
+        $set: { a: 'A0' },
+      });
+      expect(target1).toEqual({
+        a: 'A0',
+        b: 'B1',
+        c: true,
+        d: false,
+        e: 12345,
+        f: 'abcd',
+        g: { a: 1, b: { c: 2 } },
+        h: [1, 2, 3, 4],
+      });
+      expect(target1.__sakota__.getChanges()).toEqual({
+        $set: { b: 'B1' },
+      });
+      expect(target2).toEqual({
+        a: 'A0',
+        b: 'B2',
+        c: 'C2',
+        d: false,
+        e: 12345,
+        f: 'abcd',
+        g: { a: 1, b: { c: 2 } },
+        h: [1, 2, 3, 4],
+      });
+      expect(target2.__sakota__.getChanges()).toEqual({
+        $set: { b: 'B2', c: 'C2' },
+      });
+    });
+  });
 });
