@@ -116,7 +116,7 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
    */
   public getOwnPropertyDescriptor(obj: any, key: KeyType): any {
     if (key === GET_SAKOTA) {
-      return { configurable: false, enumerable: false, value: this };
+      return { configurable: true, enumerable: false, value: this };
     }
     if (key in this.diff.$unset) {
       return undefined;
