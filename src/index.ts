@@ -1,42 +1,66 @@
 /**
- * A symbol for getting the recorded change.
+ * The key used to get the handler.
  */
-const GET_SAKOTA = Symbol();
+const GET_SAKOTA = '__sakota__';
 
 /**
- * Changes are stored and
+ * A dynamic type which adds the __sakota__ key to the given type.
+ */
+export type Proxied<T extends object> = T & { [GET_SAKOTA]: Sakota<T> };
+
+/**
+ * Changes attempted on the object are stored in a mongo query like format.
  */
 export type Changes = {
   $set: { [key: string]: any };
   $unset: { [key: string]: any };
 };
 
+/**
+ * Types of object keys supported in js.
+ */
+type KeyType = string | number | symbol;
+
+/**
+ * SaKota proxies js objects and records all changes made on an object without
+ * modifying the given object. Changes made to the object will be recorded in
+ * a format similar to MongoDB udpate queries.
+ */
 export class Sakota<T extends object> implements ProxyHandler<T> {
   /**
-   * Returns a proxy which wraps the given object.
+   * Wraps the given object with a Sakota proxy and returns it.
    */
-  public static create<T extends object>(obj: T): T {
-    return new Proxy(obj, new Sakota());
+  public static create<T extends object>(obj: T): Proxied<T> {
+    return new Proxy(obj, new Sakota()) as Proxied<T>;
   }
 
   /**
-   * Returns all changes recorded by the proxy.
+   * A map of proxy handlers created for nested objects. These
+   * will be created only when needed.
+   *
+   * FIXME: the type should be the following but it is not allowed
+   *        private kids: { [key: KeyType]: Sakota<any> };
    */
-  public static changes<T extends object>(obj: T): Partial<Changes> {
-    const sakota: Sakota<T> = (obj as any)[GET_SAKOTA];
-    return sakota.getChanges();
-  }
-
-  private diff: { $set: any; $unset: any };
   private kids: any;
 
+  /**
+   * An object with changes made on the proxied object.
+   */
+  private diff: { $set: any; $unset: any };
+
+  /**
+   * Initialize!
+   */
   private constructor() {
     this.kids = {};
     this.diff = { $set: {}, $unset: {} };
   }
 
+  // Proxy Handler Traps
+  // -------------------
+
   /**
-   * Returns whether the requested property exists.
+   * Proxy handler trap for the `in` operator.
    */
   public has(obj: any, key: string | number | symbol): any {
     if (key in this.diff.$unset) {
@@ -49,9 +73,9 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
   }
 
   /**
-   * Returns the proxied value for requested property.
+   * Proxy handler trap for getting a property.
    */
-  public get(obj: any, key: string | number | symbol): any {
+  public get(obj: any, key: KeyType): any {
     if (key === GET_SAKOTA) {
       return this;
     }
@@ -69,9 +93,9 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
   }
 
   /**
-   * Returns an array of object's own property names.
+   * Proxy handler trap for `Reflect.ownKeys()`.
    */
-  public ownKeys(obj: any): (string | number | symbol)[] {
+  public ownKeys(obj: any): (KeyType)[] {
     const keys = Reflect.ownKeys(obj);
     for (const key in this.diff.$set) {
       if (keys.indexOf(key) === -1) {
@@ -88,9 +112,12 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
   }
 
   /**
-   * Returns whether the requested property exists.
+   * Proxy handler trap for `Object.getOwnPropertyDescriptor()`
    */
-  public getOwnPropertyDescriptor(obj: any, key: string | number | symbol): any {
+  public getOwnPropertyDescriptor(obj: any, key: KeyType): any {
+    if (key === GET_SAKOTA) {
+      return { configurable: false, enumerable: false, value: this };
+    }
     if (key in this.diff.$unset) {
       return undefined;
     }
@@ -101,9 +128,9 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
   }
 
   /**
-   * Marks a property as changed on the proxy.
+   * Proxy handler trap for setting a property.
    */
-  public set(_obj: any, key: string | number | symbol, val: any): boolean {
+  public set(_obj: any, key: KeyType, val: any): boolean {
     delete this.diff.$unset[key];
     delete this.kids[key];
     this.diff.$set[key] = val;
@@ -111,9 +138,9 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
   }
 
   /**
-   * Marks a property as deleted on the proxy.
+   * Proxy handler trap for the `delete` operator.
    */
-  public deleteProperty(obj: any, key: string | number | symbol): boolean {
+  public deleteProperty(obj: any, key: KeyType): boolean {
     if (!(key in obj)) {
       return true;
     }
@@ -123,10 +150,13 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
     return true;
   }
 
+  // Sakota Methods
+  // --------------
+
   /**
-   * Returns all changes recorded by the proxy.
+   * Returns changes recorded by the proxy handler and child handlers.
    */
-  private getChanges(prefix: string = ''): Partial<Changes> {
+  public getChanges(prefix: string = ''): Partial<Changes> {
     const changes: Changes = { $set: {}, $unset: {} };
     for (const key in this.diff.$set) {
       if (typeof key === 'symbol') {
@@ -160,10 +190,13 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
     return changes;
   }
 
+  // Private Methods
+  // ---------------
+
   /**
    * Creates and returns a proxy for a nested object.
    */
-  private getKid<U extends object>(key: string | number | symbol, obj: U): U {
+  private getKid<U extends object>(key: KeyType, obj: U): U {
     const cached = this.kids[key];
     if (cached) {
       return cached;

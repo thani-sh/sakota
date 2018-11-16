@@ -2,8 +2,10 @@ import { Sakota } from '../';
 
 describe('Sakota', () => {
   describe('without changes', () => {
-    it('should not change any existing values', () => {
-      const object = {
+    let target: any;
+
+    beforeEach(() => {
+      target = Sakota.create({
         a: undefined,
         b: null,
         c: true,
@@ -12,8 +14,10 @@ describe('Sakota', () => {
         f: 'abcd',
         g: { a: 1, b: { c: 2 } },
         h: [1, 2, 3, 4],
-      };
-      const target = Sakota.create(object);
+      });
+    });
+
+    it('should not change any existing values', () => {
       expect(target).toEqual({
         a: undefined,
         b: null,
@@ -61,7 +65,7 @@ describe('Sakota', () => {
       });
 
       it('should record the change', () => {
-        expect(Sakota.changes(target)).toEqual({
+        expect(target.__sakota__.getChanges()).toEqual({
           $set: { i: 'new-property' },
         });
       });
@@ -99,7 +103,7 @@ describe('Sakota', () => {
       });
 
       it('should record the change', () => {
-        expect(Sakota.changes(target)).toEqual({
+        expect(target.__sakota__.getChanges()).toEqual({
           $set: { 'g.i': 'new-property' },
         });
       });
@@ -137,7 +141,7 @@ describe('Sakota', () => {
       });
 
       it('should record the change', () => {
-        expect(Sakota.changes(target)).toEqual({
+        expect(target.__sakota__.getChanges()).toEqual({
           $set: { 'g.b.i': 'new-property' },
         });
       });
@@ -176,7 +180,7 @@ describe('Sakota', () => {
       });
 
       it('should record the change', () => {
-        expect(Sakota.changes(target)).toEqual({
+        expect(target.__sakota__.getChanges()).toEqual({
           $set: { e: 67890 },
         });
       });
@@ -213,7 +217,7 @@ describe('Sakota', () => {
       });
 
       it('should record the change', () => {
-        expect(Sakota.changes(target)).toEqual({
+        expect(target.__sakota__.getChanges()).toEqual({
           $set: { 'g.a': 67890 },
         });
       });
@@ -250,7 +254,7 @@ describe('Sakota', () => {
       });
 
       it('should record the change', () => {
-        expect(Sakota.changes(target)).toEqual({
+        expect(target.__sakota__.getChanges()).toEqual({
           $set: { 'g.b.c': 67890 },
         });
       });
@@ -289,7 +293,7 @@ describe('Sakota', () => {
       });
 
       it('should record the change', () => {
-        expect(Sakota.changes(target)).toEqual({
+        expect(target.__sakota__.getChanges()).toEqual({
           $unset: { e: true },
         });
       });
@@ -327,7 +331,7 @@ describe('Sakota', () => {
       });
 
       it('should record the change', () => {
-        expect(Sakota.changes(target)).toEqual({
+        expect(target.__sakota__.getChanges()).toEqual({
           $unset: { 'g.a': true },
         });
       });
@@ -365,7 +369,7 @@ describe('Sakota', () => {
       });
 
       it('should record the change', () => {
-        expect(Sakota.changes(target)).toEqual({
+        expect(target.__sakota__.getChanges()).toEqual({
           $unset: { 'g.b.c': true },
         });
       });
@@ -402,7 +406,7 @@ describe('Sakota', () => {
       });
 
       it('should not record the change', () => {
-        expect(Sakota.changes(target)).toEqual({});
+        expect(target.__sakota__.getChanges()).toEqual({});
       });
     });
   });
