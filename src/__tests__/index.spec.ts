@@ -1,496 +1,182 @@
 import { Sakota } from '../';
 
+/**
+ * Function returns an array of different types of values.
+ */
+export const values = () => [
+  undefined,
+  null,
+  false,
+  true,
+  100,
+  'asd',
+  {},
+  [],
+  { a: 'b' },
+  { a: 'b', c: { d: 'e' } },
+  () => null,
+  class {},
+];
+
+/**
+ * Proxies the object to throw when attempted to modify.
+ */
+export function freeze<T extends object>(obj: T): T {
+  return new Proxy(obj, {
+    get: (o, p: keyof T): any => {
+      const val = o[p];
+      if (val && typeof val === 'object') {
+        return freeze(val as any);
+      }
+      return val;
+    },
+    set: () => fail() as any,
+  });
+}
+
+/**
+ * The main unit test block
+ */
 describe('Sakota', () => {
-  describe('without changes', () => {
-    let target: any;
+  [
+    // setting a new value with an empty target
+    // ----------------------------------------
+    ...values().map(val => () => ({
+      target: {},
+      action: (obj: any) => {
+        obj.x = val;
+      },
+      result: { x: val },
+      change: {
+        $set: { x: val },
+      },
+    })),
+
+    // setting a new value when the target is not empty
+    // ------------------------------------------------
+    ...values().map(val => () => ({
+      target: { a: 1, b: 2 },
+      action: (obj: any) => {
+        obj.x = val;
+      },
+      result: { a: 1, b: 2, x: val },
+      change: {
+        $set: { x: val },
+      },
+    })),
+
+    // modifying an existing value
+    // ---------------------------
+    ...values().map(val => () => ({
+      target: { a: 1, b: 2 },
+      action: (obj: any) => {
+        obj.a = val;
+      },
+      result: { a: val, b: 2 },
+      change: {
+        $set: { a: val },
+      },
+    })),
+
+    // deleting an existing property
+    // -----------------------------
+    ...values().map(val => () => ({
+      target: { a: 1, b: val },
+      action: (obj: any) => {
+        delete obj.b;
+      },
+      result: { a: 1 },
+      change: {
+        $unset: { b: true },
+      },
+    })),
+
+    // deleting a missing property
+    // ---------------------------
+    () => ({
+      target: { a: 1 },
+      action: (obj: any) => {
+        delete obj.x;
+      },
+      result: { a: 1 },
+      change: {},
+    }),
+
+    // setting a new value in a nested object
+    // --------------------------------------
+    ...values().map(val => () => ({
+      target: { a: { b: 1 }, c: { d: { e: 2 } } },
+      action: (obj: any) => {
+        obj.a.x = val;
+        obj.c.d.y = val;
+      },
+      result: { a: { b: 1, x: val }, c: { d: { e: 2, y: val } } },
+      change: {
+        $set: { 'a.x': val, 'c.d.y': val },
+      },
+    })),
+
+    // modifying an existing value in a nested object
+    // ----------------------------------------------
+    ...values().map(val => () => ({
+      target: { a: { b: 1 }, c: { d: { e: 2 } } },
+      action: (obj: any) => {
+        obj.a.b = val;
+        obj.c.d.e = val;
+      },
+      result: { a: { b: val }, c: { d: { e: val } } },
+      change: {
+        $set: { 'a.b': val, 'c.d.e': val },
+      },
+    })),
+
+    // deleting an existing value in a nested object
+    // ---------------------------------------------
+    ...values().map(val => () => ({
+      target: { a: { b: val }, c: { d: { e: val } } },
+      action: (obj: any) => {
+        delete obj.a.b;
+        delete obj.c.d.e;
+      },
+      result: { a: {}, c: { d: {} } },
+      change: {
+        $unset: { 'a.b': true, 'c.d.e': true },
+      },
+    })),
+
+    // deleting a missing property in a nested object
+    // ----------------------------------------------
+    () => ({
+      target: { a: { b: 1 }, c: { d: { e: 2 } } },
+      action: (obj: any) => {
+        delete obj.a.x;
+        delete obj.c.d.y;
+      },
+      result: { a: { b: 1 }, c: { d: { e: 2 } } },
+      change: {},
+    }),
+  ].forEach(f => {
+    let c: any;
 
     beforeEach(() => {
-      target = Sakota.create({
-        a: undefined,
-        b: null,
-        c: true,
-        d: false,
-        e: 12345,
-        f: 'abcd',
-        g: { a: 1, b: { c: 2 } },
-        h: [1, 2, 3, 4],
-      });
+      c = f();
     });
 
-    it('should not change any existing values', () => {
-      expect(target).toEqual({
-        a: undefined,
-        b: null,
-        c: true,
-        d: false,
-        e: 12345,
-        f: 'abcd',
-        g: { a: 1, b: { c: 2 } },
-        h: [1, 2, 3, 4],
-      });
-    });
-  });
-
-  describe('set a new property', () => {
-    describe('set a value on level 0', () => {
-      let target: any;
-
-      beforeEach(() => {
-        target = Sakota.create({
-          a: undefined,
-          b: null,
-          c: true,
-          d: false,
-          e: 12345,
-          f: 'abcd',
-          g: { a: 1, b: { c: 2 } },
-          h: [1, 2, 3, 4],
-        });
-        target.i = 'new-property';
-      });
-
-      it('should reflect the change', () => {
-        expect('i' in target).toBe(true);
-        expect(target).toEqual({
-          a: undefined,
-          b: null,
-          c: true,
-          d: false,
-          e: 12345,
-          f: 'abcd',
-          g: { a: 1, b: { c: 2 } },
-          h: [1, 2, 3, 4],
-          i: 'new-property',
-        });
-      });
-
-      it('should record the change', () => {
-        expect(target.__sakota__.getChanges()).toEqual({
-          $set: { i: 'new-property' },
-        });
-      });
+    it('should apply the change on the proxy', () => {
+      const proxy = Sakota.create(c.target);
+      c.action(proxy);
+      expect(proxy).toEqual(c.result as any);
     });
 
-    describe('set a value on level 1', () => {
-      let target: any;
-
-      beforeEach(() => {
-        target = Sakota.create({
-          a: undefined,
-          b: null,
-          c: true,
-          d: false,
-          e: 12345,
-          f: 'abcd',
-          g: { a: 1, b: { c: 2 } },
-          h: [1, 2, 3, 4],
-        });
-        target.g.i = 'new-property';
-      });
-
-      it('should reflect the change', () => {
-        expect('i' in target.g).toBe(true);
-        expect(target).toEqual({
-          a: undefined,
-          b: null,
-          c: true,
-          d: false,
-          e: 12345,
-          f: 'abcd',
-          g: { a: 1, b: { c: 2 }, i: 'new-property' },
-          h: [1, 2, 3, 4],
-        });
-      });
-
-      it('should record the change', () => {
-        expect(target.__sakota__.getChanges()).toEqual({
-          $set: { 'g.i': 'new-property' },
-        });
-      });
+    it('should record all applied changes', () => {
+      const proxy = Sakota.create(c.target);
+      c.action(proxy);
+      expect(proxy.__sakota__.getChanges()).toEqual(c.change);
     });
 
-    describe('set a value on level 2', () => {
-      let target: any;
-
-      beforeEach(() => {
-        target = Sakota.create({
-          a: undefined,
-          b: null,
-          c: true,
-          d: false,
-          e: 12345,
-          f: 'abcd',
-          g: { a: 1, b: { c: 2 } },
-          h: [1, 2, 3, 4],
-        });
-        target.g.b.i = 'new-property';
-      });
-
-      it('should reflect the change', () => {
-        expect('i' in target.g.b).toBe(true);
-        expect(target).toEqual({
-          a: undefined,
-          b: null,
-          c: true,
-          d: false,
-          e: 12345,
-          f: 'abcd',
-          g: { a: 1, b: { c: 2, i: 'new-property' } },
-          h: [1, 2, 3, 4],
-        });
-      });
-
-      it('should record the change', () => {
-        expect(target.__sakota__.getChanges()).toEqual({
-          $set: { 'g.b.i': 'new-property' },
-        });
-      });
-    });
-  });
-
-  describe('change a property', () => {
-    describe('set a value on level 0', () => {
-      let target: any;
-
-      beforeEach(() => {
-        target = Sakota.create({
-          a: undefined,
-          b: null,
-          c: true,
-          d: false,
-          e: 12345,
-          f: 'abcd',
-          g: { a: 1, b: { c: 2 } },
-          h: [1, 2, 3, 4],
-        });
-        target.e = 67890;
-      });
-
-      it('should reflect the change', () => {
-        expect(target).toEqual({
-          a: undefined,
-          b: null,
-          c: true,
-          d: false,
-          e: 67890,
-          f: 'abcd',
-          g: { a: 1, b: { c: 2 } },
-          h: [1, 2, 3, 4],
-        });
-      });
-
-      it('should record the change', () => {
-        expect(target.__sakota__.getChanges()).toEqual({
-          $set: { e: 67890 },
-        });
-      });
-    });
-
-    describe('set a value on level 1', () => {
-      let target: any;
-
-      beforeEach(() => {
-        target = Sakota.create({
-          a: undefined,
-          b: null,
-          c: true,
-          d: false,
-          e: 12345,
-          f: 'abcd',
-          g: { a: 1, b: { c: 2 } },
-          h: [1, 2, 3, 4],
-        });
-        target.g.a = 67890;
-      });
-
-      it('should reflect the change', () => {
-        expect(target).toEqual({
-          a: undefined,
-          b: null,
-          c: true,
-          d: false,
-          e: 12345,
-          f: 'abcd',
-          g: { a: 67890, b: { c: 2 } },
-          h: [1, 2, 3, 4],
-        });
-      });
-
-      it('should record the change', () => {
-        expect(target.__sakota__.getChanges()).toEqual({
-          $set: { 'g.a': 67890 },
-        });
-      });
-    });
-
-    describe('set a value on level 2', () => {
-      let target: any;
-
-      beforeEach(() => {
-        target = Sakota.create({
-          a: undefined,
-          b: null,
-          c: true,
-          d: false,
-          e: 12345,
-          f: 'abcd',
-          g: { a: 1, b: { c: 2 } },
-          h: [1, 2, 3, 4],
-        });
-        target.g.b.c = 67890;
-      });
-
-      it('should reflect the change', () => {
-        expect(target).toEqual({
-          a: undefined,
-          b: null,
-          c: true,
-          d: false,
-          e: 12345,
-          f: 'abcd',
-          g: { a: 1, b: { c: 67890 } },
-          h: [1, 2, 3, 4],
-        });
-      });
-
-      it('should record the change', () => {
-        expect(target.__sakota__.getChanges()).toEqual({
-          $set: { 'g.b.c': 67890 },
-        });
-      });
-    });
-  });
-
-  describe('delete a property', () => {
-    describe('delete a value on level 0', () => {
-      let target: any;
-
-      beforeEach(() => {
-        target = Sakota.create({
-          a: undefined,
-          b: null,
-          c: true,
-          d: false,
-          e: 12345,
-          f: 'abcd',
-          g: { a: 1, b: { c: 2 } },
-          h: [1, 2, 3, 4],
-        });
-        delete target.e;
-      });
-
-      it('should reflect the change', () => {
-        expect('e' in target).toBe(false);
-        expect(target).toEqual({
-          a: undefined,
-          b: null,
-          c: true,
-          d: false,
-          f: 'abcd',
-          g: { a: 1, b: { c: 2 } },
-          h: [1, 2, 3, 4],
-        });
-      });
-
-      it('should record the change', () => {
-        expect(target.__sakota__.getChanges()).toEqual({
-          $unset: { e: true },
-        });
-      });
-    });
-
-    describe('delete a value on level 1', () => {
-      let target: any;
-
-      beforeEach(() => {
-        target = Sakota.create({
-          a: undefined,
-          b: null,
-          c: true,
-          d: false,
-          e: 12345,
-          f: 'abcd',
-          g: { a: 1, b: { c: 2 } },
-          h: [1, 2, 3, 4],
-        });
-        delete target.g.a;
-      });
-
-      it('should reflect the change', () => {
-        expect('g.a' in target).toBe(false);
-        expect(target).toEqual({
-          a: undefined,
-          b: null,
-          c: true,
-          d: false,
-          e: 12345,
-          f: 'abcd',
-          g: { b: { c: 2 } },
-          h: [1, 2, 3, 4],
-        });
-      });
-
-      it('should record the change', () => {
-        expect(target.__sakota__.getChanges()).toEqual({
-          $unset: { 'g.a': true },
-        });
-      });
-    });
-
-    describe('delete a value on level 2', () => {
-      let target: any;
-
-      beforeEach(() => {
-        target = Sakota.create({
-          a: undefined,
-          b: null,
-          c: true,
-          d: false,
-          e: 12345,
-          f: 'abcd',
-          g: { a: 1, b: { c: 2 } },
-          h: [1, 2, 3, 4],
-        });
-        delete target.g.b.c;
-      });
-
-      it('should reflect the change', () => {
-        expect('g.b.c' in target).toBe(false);
-        expect(target).toEqual({
-          a: undefined,
-          b: null,
-          c: true,
-          d: false,
-          e: 12345,
-          f: 'abcd',
-          g: { a: 1, b: {} },
-          h: [1, 2, 3, 4],
-        });
-      });
-
-      it('should record the change', () => {
-        expect(target.__sakota__.getChanges()).toEqual({
-          $unset: { 'g.b.c': true },
-        });
-      });
-    });
-
-    describe('delete an unknown property', () => {
-      let target: any;
-
-      beforeEach(() => {
-        target = Sakota.create({
-          a: undefined,
-          b: null,
-          c: true,
-          d: false,
-          e: 12345,
-          f: 'abcd',
-          g: { a: 1, b: { c: 2 } },
-          h: [1, 2, 3, 4],
-        });
-        delete target.x;
-      });
-
-      it('should not change the object', () => {
-        expect(target).toEqual({
-          a: undefined,
-          b: null,
-          c: true,
-          d: false,
-          e: 12345,
-          f: 'abcd',
-          g: { a: 1, b: { c: 2 } },
-          h: [1, 2, 3, 4],
-        });
-      });
-
-      it('should not record the change', () => {
-        expect(target.__sakota__.getChanges()).toEqual({});
-      });
-    });
-  });
-
-  describe('multiple proxies', () => {
-    let target0: any;
-    let target1: any;
-    let target2: any;
-
-    beforeEach(() => {
-      const source = {
-        a: undefined,
-        b: null,
-        c: true,
-        d: false,
-        e: 12345,
-        f: 'abcd',
-        g: { a: 1, b: { c: 2 } },
-        h: [1, 2, 3, 4],
-      };
-      target0 = Sakota.create(source);
-      target1 = Sakota.create(target0);
-      target2 = Sakota.create(target1);
-    });
-
-    it('should not change any existing values', () => {
-      [target0, target1, target2].forEach(target => {
-        expect(target).toEqual({
-          a: undefined,
-          b: null,
-          c: true,
-          d: false,
-          e: 12345,
-          f: 'abcd',
-          g: { a: 1, b: { c: 2 } },
-          h: [1, 2, 3, 4],
-        });
-      });
-    });
-
-    it('should record and reflect changes on each level', () => {
-      target0.a = 'A0';
-      target1.b = 'B1';
-      target2.b = 'B2';
-      target2.c = 'C2';
-      expect(target0).toEqual({
-        a: 'A0',
-        b: null,
-        c: true,
-        d: false,
-        e: 12345,
-        f: 'abcd',
-        g: { a: 1, b: { c: 2 } },
-        h: [1, 2, 3, 4],
-      });
-      expect(target0.__sakota__.getChanges()).toEqual({
-        $set: { a: 'A0' },
-      });
-      expect(target1).toEqual({
-        a: 'A0',
-        b: 'B1',
-        c: true,
-        d: false,
-        e: 12345,
-        f: 'abcd',
-        g: { a: 1, b: { c: 2 } },
-        h: [1, 2, 3, 4],
-      });
-      expect(target1.__sakota__.getChanges()).toEqual({
-        $set: { b: 'B1' },
-      });
-      expect(target2).toEqual({
-        a: 'A0',
-        b: 'B2',
-        c: 'C2',
-        d: false,
-        e: 12345,
-        f: 'abcd',
-        g: { a: 1, b: { c: 2 } },
-        h: [1, 2, 3, 4],
-      });
-      expect(target2.__sakota__.getChanges()).toEqual({
-        $set: { b: 'B2', c: 'C2' },
-      });
+    it('should not modify the proxy target', () => {
+      const proxy = Sakota.create(freeze(c.target));
+      c.action(proxy);
     });
   });
 });
