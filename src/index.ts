@@ -46,14 +46,20 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
   /**
    * An object with changes made on the proxied object.
    */
-  private diff: { $set: any; $unset: any };
+  private diff: { $set: any; $unset: any } | null;
+
+  /**
+   * Indicates whether the proxy or any of it's children has changes.
+   */
+  private changed: boolean;
 
   /**
    * Initialize!
    */
-  private constructor() {
+  private constructor(private parent: Sakota<any> | null = null) {
     this.kids = {};
-    this.diff = { $set: {}, $unset: {} };
+    this.diff = null;
+    this.changed = false;
   }
 
   // Proxy Handler Traps
@@ -63,11 +69,13 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
    * Proxy handler trap for the `in` operator.
    */
   public has(obj: any, key: string | number | symbol): any {
-    if (key in this.diff.$unset) {
-      return false;
-    }
-    if (key in this.diff.$set) {
-      return true;
+    if (this.diff) {
+      if (key in this.diff.$unset) {
+        return false;
+      }
+      if (key in this.diff.$set) {
+        return true;
+      }
     }
     return key in obj;
   }
@@ -79,11 +87,13 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
     if (key === GET_SAKOTA) {
       return this;
     }
-    if (key in this.diff.$unset) {
-      return undefined;
-    }
-    if (key in this.diff.$set) {
-      return this.diff.$set[key as any];
+    if (this.diff) {
+      if (key in this.diff.$unset) {
+        return undefined;
+      }
+      if (key in this.diff.$set) {
+        return this.diff.$set[key as any];
+      }
     }
     const val = obj[key];
     if (!val || typeof val !== 'object') {
@@ -97,15 +107,17 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
    */
   public ownKeys(obj: any): (KeyType)[] {
     const keys = Reflect.ownKeys(obj);
-    for (const key in this.diff.$set) {
-      if (keys.indexOf(key) === -1) {
-        keys.push(key);
+    if (this.diff) {
+      for (const key in this.diff.$set) {
+        if (keys.indexOf(key) === -1) {
+          keys.push(key);
+        }
       }
-    }
-    for (const key in this.diff.$unset) {
-      const index = keys.indexOf(key);
-      if (index !== -1) {
-        keys.splice(index, 1);
+      for (const key in this.diff.$unset) {
+        const index = keys.indexOf(key);
+        if (index !== -1) {
+          keys.splice(index, 1);
+        }
       }
     }
     return keys;
@@ -118,11 +130,13 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
     if (key === GET_SAKOTA) {
       return { configurable: true, enumerable: false, value: this };
     }
-    if (key in this.diff.$unset) {
-      return undefined;
-    }
-    if (key in this.diff.$set) {
-      return { configurable: true, enumerable: true, value: this.diff.$set[key] };
+    if (this.diff) {
+      if (key in this.diff.$unset) {
+        return undefined;
+      }
+      if (key in this.diff.$set) {
+        return { configurable: true, enumerable: true, value: this.diff.$set[key] };
+      }
     }
     return Object.getOwnPropertyDescriptor(obj, key);
   }
@@ -131,9 +145,13 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
    * Proxy handler trap for setting a property.
    */
   public set(_obj: any, key: KeyType, val: any): boolean {
+    if (!this.diff) {
+      this.diff = { $set: {}, $unset: {} };
+    }
     delete this.diff.$unset[key];
     delete this.kids[key];
     this.diff.$set[key] = val;
+    this.onChange();
     return true;
   }
 
@@ -144,9 +162,13 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
     if (!(key in obj)) {
       return true;
     }
+    if (!this.diff) {
+      this.diff = { $set: {}, $unset: {} };
+    }
     delete this.diff.$set[key];
     delete this.kids[key];
     this.diff.$unset[key] = true;
+    this.onChange();
     return true;
   }
 
@@ -154,23 +176,32 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
   // --------------
 
   /**
+   * Returns a boolean indicating whether the proxy has any changes.
+   */
+  public hasChanges(): boolean {
+    return this.changed;
+  }
+
+  /**
    * Returns changes recorded by the proxy handler and child handlers.
    */
   public getChanges(prefix: string = ''): Partial<Changes> {
     const changes: Changes = { $set: {}, $unset: {} };
-    for (const key in this.diff.$set) {
-      if (typeof key === 'symbol') {
-        continue;
+    if (this.diff) {
+      for (const key in this.diff.$set) {
+        if (typeof key === 'symbol') {
+          continue;
+        }
+        const keyWithPrefix = `${prefix}${key}`;
+        changes.$set[keyWithPrefix] = this.diff.$set[key];
       }
-      const keyWithPrefix = `${prefix}${key}`;
-      changes.$set[keyWithPrefix] = this.diff.$set[key];
-    }
-    for (const key in this.diff.$unset) {
-      if (typeof key === 'symbol') {
-        continue;
+      for (const key in this.diff.$unset) {
+        if (typeof key === 'symbol') {
+          continue;
+        }
+        const keyWithPrefix = `${prefix}${key}`;
+        changes.$unset[keyWithPrefix] = true;
       }
-      const keyWithPrefix = `${prefix}${key}`;
-      changes.$unset[keyWithPrefix] = true;
     }
     for (const key in this.kids) {
       if (typeof key === 'symbol') {
@@ -194,6 +225,16 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
   // ---------------
 
   /**
+   * Marks the proxy and all proxies in it's parent chain as changed.
+   */
+  private onChange(): void {
+    this.changed = true;
+    if (this.parent) {
+      this.parent.onChange();
+    }
+  }
+
+  /**
    * Creates and returns a proxy for a nested object.
    */
   private getKid<U extends object>(key: KeyType, obj: U): U {
@@ -201,7 +242,8 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
     if (cached) {
       return cached;
     }
-    const agent = new Sakota();
-    return (this.kids[key] = new Proxy(obj, agent));
+    const agent = new Sakota(this);
+    const proxy = this.kids[key] = new Proxy(obj, agent)
+    return proxy;
   }
 }
