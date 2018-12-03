@@ -49,11 +49,17 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
   private diff: { $set: any; $unset: any } | null;
 
   /**
+   * Indicates whether the proxy or any of it's children has changes.
+   */
+  private changed: boolean;
+
+  /**
    * Initialize!
    */
-  private constructor() {
+  private constructor(private parent: Sakota<any> | null = null) {
     this.kids = {};
     this.diff = null;
+    this.changed = false;
   }
 
   // Proxy Handler Traps
@@ -145,6 +151,7 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
     delete this.diff.$unset[key];
     delete this.kids[key];
     this.diff.$set[key] = val;
+    this.onChange();
     return true;
   }
 
@@ -161,11 +168,19 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
     delete this.diff.$set[key];
     delete this.kids[key];
     this.diff.$unset[key] = true;
+    this.onChange();
     return true;
   }
 
   // Sakota Methods
   // --------------
+
+  /**
+   * Returns a boolean indicating whether the proxy has any changes.
+   */
+  public hasChanges(): boolean {
+    return this.changed;
+  }
 
   /**
    * Returns changes recorded by the proxy handler and child handlers.
@@ -206,27 +221,18 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
     return changes;
   }
 
-  /**
-   * Returns a boolean indicating whether the proxy has any changes.
-   */
-  public hasChanges(checkSymbols = false): boolean {
-    if (this.diff) {
-      return true;
-    }
-    for (const key in this.kids) {
-      if (!checkSymbols && typeof key === 'symbol') {
-        continue;
-      }
-      const kid: Sakota<any> = this.kids[key][GET_SAKOTA];
-      if (kid.hasChanges(checkSymbols)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   // Private Methods
   // ---------------
+
+  /**
+   * Marks the proxy and all proxies in it's parent chain as changed.
+   */
+  private onChange(): void {
+    this.changed = true;
+    if (this.parent) {
+      this.parent.onChange();
+    }
+  }
 
   /**
    * Creates and returns a proxy for a nested object.
@@ -236,7 +242,7 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
     if (cached) {
       return cached;
     }
-    const agent = new Sakota();
+    const agent = new Sakota(this);
     const proxy = this.kids[key] = new Proxy(obj, agent)
     return proxy;
   }
