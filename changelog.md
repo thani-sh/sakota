@@ -1,3 +1,9 @@
+# 2017-12-03 - v2.1.0
+
+ - Added a `hasChanges` method to check whether the proxy has any changes
+ - Cached `getChanges` method result to improve performance
+ - Fixed a bug with tracking changes when deleting newly added property
+
 # 2017-11-16 - v2.0.0
 
  - Removed the `Sakota.changes` method. It used to be the only way to get changes from the proxy.
