@@ -178,5 +178,11 @@ describe('Sakota', () => {
       const proxy = Sakota.create(freeze(c.target));
       c.action(proxy);
     });
+
+    it( 'should indicate the proxy has changed', () => {
+      const proxy = Sakota.create(c.target);
+      c.action(proxy);
+      expect( proxy.__sakota__.hasChanges()).toEqual( Object.keys(c.change).length > 0 );
+    });
   });
 });
