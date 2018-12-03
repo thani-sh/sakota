@@ -155,34 +155,81 @@ describe('Sakota', () => {
       result: { a: { b: 1 }, c: { d: { e: 2 } } },
       change: {},
     }),
+
+    // modify the object and check result multiple times
+    // -------------------------------------------------
+    () => ({
+      target: { a: { b: 1 }, c: { d: { e: 2 } } },
+      action: [
+        (obj: any) => obj.a.b = 10,
+        (obj: any) => obj.x = 30,
+        (obj: any) => obj.c.d.e = 20,
+        (obj: any) => obj.a.b = 100,
+        (obj: any) => delete obj.x,
+        (obj: any) => delete obj.c,
+      ],
+      result: [
+        { a: { b: 10 }, c: { d: { e: 2 } } },
+        { a: { b: 10 }, c: { d: { e: 2 } }, x: 30 },
+        { a: { b: 10 }, c: { d: { e: 20 } }, x: 30 },
+        { a: { b: 100 }, c: { d: { e: 20 } }, x: 30 },
+        { a: { b: 100 }, c: { d: { e: 20 } } },
+        { a: { b: 100 } },
+      ],
+      change: [
+        { $set: { 'a.b': 10 }},
+        { $set: { 'a.b': 10, x: 30 }},
+        { $set: { 'a.b': 10, x: 30, 'c.d.e': 20 }},
+        { $set: { 'a.b': 100, x: 30, 'c.d.e': 20 }},
+        { $set: { 'a.b': 100, 'c.d.e': 20 }, $unset: { x: true }},
+        { $set: { 'a.b': 100 }, $unset: { x: true, c: true }},
+      ],
+    }),
   ].forEach(f => {
     let c: any;
 
     beforeEach(() => {
       c = f();
+      if (!Array.isArray(c.action)) {
+        c.action = [c.action];
+      }
+      if (!Array.isArray(c.result)) {
+        c.result = [c.result];
+      }
+      if (!Array.isArray(c.change)) {
+        c.change = [c.change];
+      }
     });
 
     it('should apply the change on the proxy', () => {
       const proxy = Sakota.create(c.target);
-      c.action(proxy);
-      expect(proxy).toEqual(c.result as any);
+      for ( let i = 0; i < c.action.length; ++i ) {
+        c.action[i](proxy);
+        expect(proxy).toEqual(c.result[i] as any);
+      }
     });
 
     it('should record all applied changes', () => {
       const proxy = Sakota.create(c.target);
-      c.action(proxy);
-      expect(proxy.__sakota__.getChanges()).toEqual(c.change);
+      for ( let i = 0; i < c.action.length; ++i ) {
+        c.action[i](proxy);
+        expect(proxy.__sakota__.getChanges()).toEqual(c.change[i]);
+      }
     });
 
     it('should not modify the proxy target', () => {
       const proxy = Sakota.create(freeze(c.target));
-      c.action(proxy);
+      for ( let i = 0; i < c.action.length; ++i ) {
+        c.action[i](proxy);
+      }
     });
 
     it( 'should indicate the proxy has changed', () => {
       const proxy = Sakota.create(c.target);
-      c.action(proxy);
-      expect( proxy.__sakota__.hasChanges()).toEqual( Object.keys(c.change).length > 0 );
+      for ( let i = 0; i < c.action.length; ++i ) {
+        c.action[i](proxy);
+        expect( proxy.__sakota__.hasChanges()).toEqual( Object.keys(c.change[i]).length > 0 );
+      }
     });
   });
 });
