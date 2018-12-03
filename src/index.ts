@@ -256,7 +256,7 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
       return cached;
     }
     const agent = new Sakota(this);
-    const proxy = this.kids[key] = new Proxy(obj, agent)
+    const proxy = (this.kids[key] = new Proxy(obj, agent));
     return proxy;
   }
 }
