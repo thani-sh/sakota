@@ -114,6 +114,10 @@ describe('Sakota', () => {
       change: {
         $set: { 'a.x': val, 'c.d.y': val },
       },
+      nested: {
+        a: { $set: { x: val } },
+        c: { $set: { 'd.y': val } },
+      },
     })),
 
     // modifying an existing value in a nested object
@@ -128,6 +132,10 @@ describe('Sakota', () => {
       change: {
         $set: { 'a.b': val, 'c.d.e': val },
       },
+      nested: {
+        a: { $set: { b: val } },
+        c: { $set: { 'd.e': val } },
+      },
     })),
 
     // deleting an existing value in a nested object
@@ -141,6 +149,10 @@ describe('Sakota', () => {
       result: { a: {}, c: { d: {} } },
       change: {
         $unset: { 'a.b': true, 'c.d.e': true },
+      },
+      nested: {
+        a: { $unset: { b: true } },
+        c: { $unset: { 'd.e': true } },
       },
     })),
 
@@ -184,6 +196,14 @@ describe('Sakota', () => {
         { $set: { 'a.b': 100, 'c.d.e': 20 }, $unset: { x: true } },
         { $set: { 'a.b': 100 }, $unset: { x: true, c: true } },
       ],
+      nested: [
+        { a: { $set: { b: 10 } }, c: {} },
+        { a: { $set: { b: 10 } }, c: {} },
+        { a: { $set: { b: 10 } }, c: { $set: { 'd.e': 20 } } },
+        { a: { $set: { b: 100 } }, c: { $set: { 'd.e': 20 } } },
+        { a: { $set: { b: 100 } }, c: { $set: { 'd.e': 20 } } },
+        { a: { $set: { b: 100 } } },
+      ],
     }),
   ].forEach((f, i) => {
     describe(`test case: ${i}`, () => {
@@ -199,6 +219,9 @@ describe('Sakota', () => {
         }
         if (!Array.isArray(c.change)) {
           c.change = [c.change];
+        }
+        if (!Array.isArray(c.nested)) {
+          c.nested = [c.nested];
         }
       });
 
@@ -218,6 +241,16 @@ describe('Sakota', () => {
         }
       });
 
+      it('should record changes for nested objects', () => {
+        const proxy = Sakota.create(c.target);
+        for (let i = 0; i < c.action.length; ++i) {
+          c.action[i](proxy);
+          for (const key in c.nested[i]) {
+            expect(proxy[key].__sakota__.getChanges()).toEqual(c.nested[i][key]);
+          }
+        }
+      });
+
       it('should not modify the proxy target', () => {
         const proxy = Sakota.create(freeze(c.target));
         for (let i = 0; i < c.action.length; ++i) {
@@ -230,6 +263,16 @@ describe('Sakota', () => {
         for (let i = 0; i < c.action.length; ++i) {
           c.action[i](proxy);
           expect(proxy.__sakota__.hasChanges()).toEqual(Object.keys(c.change[i]).length > 0);
+        }
+      });
+
+      it('should indicate the proxy has changed for nested objects', () => {
+        const proxy = Sakota.create(c.target);
+        for (let i = 0; i < c.action.length; ++i) {
+          c.action[i](proxy);
+          for (const key in c.nested[i]) {
+            expect(proxy[key].__sakota__.hasChanges()).toEqual(Object.keys(c.nested[i][key]).length > 0);
+          }
         }
       });
     });
