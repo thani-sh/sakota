@@ -56,7 +56,7 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
   /**
    * The cached result of getChanges method. Cleared when a change occurs.
    */
-  private changes: Changes | null;
+  private changes: { [prefix: string]: Changes | null };
 
   /**
    * Initialize!
@@ -65,7 +65,7 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
     this.kids = {};
     this.diff = null;
     this.changed = false;
-    this.changes = null;
+    this.changes = {};
   }
 
   // Proxy Handler Traps
@@ -194,8 +194,8 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
    * Returns changes recorded by the proxy handler and child handlers.
    */
   public getChanges(prefix: string = ''): Partial<Changes> {
-    if (this.changes) {
-      return this.changes;
+    if (this.changes[prefix]) {
+      return this.changes[prefix] as Partial<Changes>;
     }
     const changes: Changes = { $set: {}, $unset: {} };
     if (this.diff) {
@@ -229,7 +229,7 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
         delete (changes as any)[key];
       }
     }
-    this.changes = changes;
+    this.changes[prefix] = changes;
     return changes;
   }
 
@@ -241,7 +241,7 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
    */
   private onChange(): void {
     this.changed = true;
-    this.changes = null;
+    this.changes = {};
     if (this.parent) {
       this.parent.onChange();
     }
