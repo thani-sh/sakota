@@ -1,3 +1,7 @@
+# 2017-12-03 - v2.1.1
+
+ - Fixed a bug with getChanges method result cache used when the prefix changes.
+
 # 2017-12-03 - v2.1.0
 
  - Added a `hasChanges` method to check whether the proxy has any changes
