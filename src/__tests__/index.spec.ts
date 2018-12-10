@@ -258,6 +258,14 @@ describe('Sakota', () => {
         }
       });
 
+      it('should hold a reference to the proxy target', () => {
+        const proxy = Sakota.create(c.target);
+        for (let i = 0; i < c.action.length; ++i) {
+          c.action[i](proxy);
+        }
+        expect( proxy.__sakota__.getTarget() ).toBe( c.target );
+      });
+
       it('should indicate the proxy has changed', () => {
         const proxy = Sakota.create(c.target);
         for (let i = 0; i < c.action.length; ++i) {
