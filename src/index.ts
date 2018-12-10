@@ -31,7 +31,7 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
    * Wraps the given object with a Sakota proxy and returns it.
    */
   public static create<T extends object>(obj: T): Proxied<T> {
-    return new Proxy(obj, new Sakota()) as Proxied<T>;
+    return new Proxy(obj, new Sakota(obj)) as Proxied<T>;
   }
 
   /**
@@ -61,7 +61,7 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
   /**
    * Initialize!
    */
-  private constructor(private parent: Sakota<any> | null = null) {
+  private constructor(private target: T, private parent: Sakota<any> | null = null) {
     this.kids = {};
     this.diff = null;
     this.changed = false;
@@ -186,6 +186,13 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
   /**
    * Returns a boolean indicating whether the proxy has any changes.
    */
+  public getTarget(): T {
+    return this.target;
+  }
+
+  /**
+   * Returns a boolean indicating whether the proxy has any changes.
+   */
   public hasChanges(): boolean {
     return this.changed;
   }
@@ -255,7 +262,7 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
     if (cached) {
       return cached;
     }
-    const agent = new Sakota(this);
+    const agent = new Sakota(obj, this);
     const proxy = (this.kids[key] = new Proxy(obj, agent));
     return proxy;
   }
