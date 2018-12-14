@@ -263,7 +263,7 @@ describe('Sakota', () => {
         for (let i = 0; i < c.action.length; ++i) {
           c.action[i](proxy);
         }
-        expect( proxy.__sakota__.getTarget() ).toBe( c.target );
+        expect(proxy.__sakota__.getTarget()).toBe(c.target);
       });
 
       it('should indicate the proxy has changed', () => {
@@ -282,6 +282,35 @@ describe('Sakota', () => {
             expect(proxy[key].__sakota__.hasChanges()).toEqual(Object.keys(c.nested[i][key]).length > 0);
           }
         }
+      });
+    });
+  });
+
+  // Test for filtering
+  // ------------------
+
+  describe('filtering changes', () => {
+    describe('getChanges', () => {
+      it('should filter changes with a regexp', () => {
+        const proxy = Sakota.create({ a: 10, b: 20, c: 30 });
+        proxy.a = 1000;
+        delete proxy.c;
+        expect(proxy.__sakota__.getChanges('', /a/)).toEqual({ $set: { a: 1000 }});
+        expect(proxy.__sakota__.getChanges('', /c/)).toEqual({ $unset: { c: true }});
+      });
+    });
+
+    describe('hasChanges', () => {
+      it('should return true if changes are available after filtering', () => {
+        const proxy = Sakota.create({ a: 10, b: 20, c: 30 });
+        proxy.a = 1000;
+        expect(proxy.__sakota__.hasChanges(/a/)).toEqual(true);
+      });
+
+      it('should return false if no changes are available after filtering', () => {
+        const proxy = Sakota.create({ a: 10, b: 20, c: 30 });
+        proxy.a = 1000;
+        expect(proxy.__sakota__.hasChanges(/c/)).toEqual(false);
       });
     });
   });
