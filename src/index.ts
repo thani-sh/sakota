@@ -197,7 +197,7 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
     if (!this.changed || !regexp) {
       return this.changed;
     }
-    const changes = this.getChanges('', regexp)
+    const changes = this.getChanges('', regexp);
     return Object.keys(changes).length > 0;
   }
 
@@ -283,7 +283,7 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
   /**
    * Filters properties in the changes object by key.
    */
-  private filterChanges( changes: Partial<Changes>, regexp: RegExp ): Partial<Changes> {
+  private filterChanges(changes: Partial<Changes>, regexp: RegExp): Partial<Changes> {
     const filtered: Partial<Changes> = {};
     for (const opkey in changes) {
       if (!(changes as any)[opkey]) {
@@ -292,7 +292,7 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
       for (const key in (changes as any)[opkey]) {
         regexp.lastIndex = 0;
         if (regexp.test(key)) {
-          if ( !(filtered as any)[opkey]) {
+          if (!(filtered as any)[opkey]) {
             (filtered as any)[opkey] = {};
           }
           (filtered as any)[opkey][key] = (changes as any)[opkey][key];

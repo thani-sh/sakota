@@ -295,8 +295,8 @@ describe('Sakota', () => {
         const proxy = Sakota.create({ a: 10, b: 20, c: 30 });
         proxy.a = 1000;
         delete proxy.c;
-        expect(proxy.__sakota__.getChanges('', /a/)).toEqual({ $set: { a: 1000 }});
-        expect(proxy.__sakota__.getChanges('', /c/)).toEqual({ $unset: { c: true }});
+        expect(proxy.__sakota__.getChanges('', /a/)).toEqual({ $set: { a: 1000 } });
+        expect(proxy.__sakota__.getChanges('', /c/)).toEqual({ $unset: { c: true } });
       });
     });
 
