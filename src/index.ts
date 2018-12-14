@@ -56,7 +56,7 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
   /**
    * The cached result of getChanges method. Cleared when a change occurs.
    */
-  private changes: { [prefix: string]: Changes | null };
+  private changes: { [prefix: string]: Partial<Changes> | null };
 
   /**
    * Initialize!
@@ -193,17 +193,58 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
   /**
    * Returns a boolean indicating whether the proxy has any changes.
    */
-  public hasChanges(): boolean {
-    return this.changed;
+  public hasChanges(regexp?: RegExp): boolean {
+    if (!this.changed || !regexp) {
+      return this.changed;
+    }
+    const changes = this.getChanges('', regexp)
+    return Object.keys(changes).length > 0;
   }
 
   /**
    * Returns changes recorded by the proxy handler and child handlers.
    */
-  public getChanges(prefix: string = ''): Partial<Changes> {
-    if (this.changes[prefix]) {
-      return this.changes[prefix] as Partial<Changes>;
+  public getChanges(prefix: string = '', regexp?: RegExp): Partial<Changes> {
+    const cached = this.changes[prefix];
+    if (cached) {
+      return regexp ? this.filterChanges(cached, regexp) : cached;
     }
+    const changes = this.buildChanges(prefix) as Changes;
+    this.changes[prefix] = changes;
+    return regexp ? this.filterChanges(changes, regexp) : changes;
+  }
+
+  // Private Methods
+  // ---------------
+
+  /**
+   * Marks the proxy and all proxies in it's parent chain as changed.
+   */
+  private onChange(): void {
+    this.changed = true;
+    this.changes = {};
+    if (this.parent) {
+      this.parent.onChange();
+    }
+  }
+
+  /**
+   * Creates and returns a proxy for a nested object.
+   */
+  private getKid<U extends object>(key: KeyType, obj: U): U {
+    const cached = this.kids[key];
+    if (cached) {
+      return cached;
+    }
+    const agent = new Sakota(obj, this);
+    const proxy = (this.kids[key] = new Proxy(obj, agent));
+    return proxy;
+  }
+
+  /**
+   * Builds the changes object using recorded changes.
+   */
+  private buildChanges(prefix: string): Partial<Changes> {
     const changes: Changes = { $set: {}, $unset: {} };
     if (this.diff) {
       for (const key in this.diff.$set) {
@@ -236,34 +277,28 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
         delete (changes as any)[key];
       }
     }
-    this.changes[prefix] = changes;
     return changes;
   }
 
-  // Private Methods
-  // ---------------
-
   /**
-   * Marks the proxy and all proxies in it's parent chain as changed.
+   * Filters properties in the changes object by key.
    */
-  private onChange(): void {
-    this.changed = true;
-    this.changes = {};
-    if (this.parent) {
-      this.parent.onChange();
+  private filterChanges( changes: Partial<Changes>, regexp: RegExp ): Partial<Changes> {
+    const filtered: Partial<Changes> = {};
+    for (const opkey in changes) {
+      if (!(changes as any)[opkey]) {
+        continue;
+      }
+      for (const key in (changes as any)[opkey]) {
+        regexp.lastIndex = 0;
+        if (regexp.test(key)) {
+          if ( !(filtered as any)[opkey]) {
+            (filtered as any)[opkey] = {};
+          }
+          (filtered as any)[opkey][key] = (changes as any)[opkey][key];
+        }
+      }
     }
-  }
-
-  /**
-   * Creates and returns a proxy for a nested object.
-   */
-  private getKid<U extends object>(key: KeyType, obj: U): U {
-    const cached = this.kids[key];
-    if (cached) {
-      return cached;
-    }
-    const agent = new Sakota(obj, this);
-    const proxy = (this.kids[key] = new Proxy(obj, agent));
-    return proxy;
+    return filtered;
   }
 }
