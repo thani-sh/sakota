@@ -1,3 +1,7 @@
+# 2017-12-14 - v2.2.0
+
+ - Allow changs to be filtered with a regular expression in getChanges and hasChanges methods.
+
 # 2017-12-03 - v2.1.1
 
  - Fixed a bug with getChanges method result cache used when the prefix changes.
