@@ -193,25 +193,25 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
   /**
    * Returns a boolean indicating whether the proxy has any changes.
    */
-  public hasChanges(regexp?: RegExp): boolean {
-    if (!this.changed || !regexp) {
+  public hasChanges(pattern?: string | RegExp): boolean {
+    if (!this.changed || !pattern) {
       return this.changed;
     }
-    const changes = this.getChanges('', regexp);
+    const changes = this.getChanges('', pattern);
     return Object.keys(changes).length > 0;
   }
 
   /**
    * Returns changes recorded by the proxy handler and child handlers.
    */
-  public getChanges(prefix: string = '', regexp?: RegExp): Partial<Changes> {
+  public getChanges(prefix: string = '', pattern?: string | RegExp): Partial<Changes> {
     const cached = this.changes[prefix];
     if (cached) {
-      return regexp ? this.filterChanges(cached, regexp) : cached;
+      return pattern ? this.filterChanges(cached, pattern) : cached;
     }
     const changes = this.buildChanges(prefix) as Changes;
     this.changes[prefix] = changes;
-    return regexp ? this.filterChanges(changes, regexp) : changes;
+    return pattern ? this.filterChanges(changes, pattern) : changes;
   }
 
   // Private Methods
@@ -283,7 +283,8 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
   /**
    * Filters properties in the changes object by key.
    */
-  private filterChanges(changes: Partial<Changes>, regexp: RegExp): Partial<Changes> {
+  private filterChanges(changes: Partial<Changes>, pattern: string | RegExp): Partial<Changes> {
+    const regexp = (pattern instanceof RegExp) ? pattern : new RegExp(pattern);
     const filtered: Partial<Changes> = {};
     for (const opkey in changes) {
       if (!(changes as any)[opkey]) {
