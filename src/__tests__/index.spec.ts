@@ -291,6 +291,14 @@ describe('Sakota', () => {
 
   describe('filtering changes', () => {
     describe('getChanges', () => {
+      it('should filter changes with a regexp (string)', () => {
+        const proxy = Sakota.create({ a: 10, b: 20, c: 30 });
+        proxy.a = 1000;
+        delete proxy.c;
+        expect(proxy.__sakota__.getChanges('', 'a')).toEqual({ $set: { a: 1000 } });
+        expect(proxy.__sakota__.getChanges('', 'c')).toEqual({ $unset: { c: true } });
+      });
+
       it('should filter changes with a regexp', () => {
         const proxy = Sakota.create({ a: 10, b: 20, c: 30 });
         proxy.a = 1000;
@@ -301,15 +309,17 @@ describe('Sakota', () => {
     });
 
     describe('hasChanges', () => {
-      it('should return true if changes are available after filtering', () => {
+      it('should return whether there are changes filtered by a regexp (string)', () => {
+        const proxy = Sakota.create({ a: 10, b: 20, c: 30 });
+        proxy.a = 1000;
+        expect(proxy.__sakota__.hasChanges('a')).toEqual(true);
+        expect(proxy.__sakota__.hasChanges('c')).toEqual(false);
+      });
+
+      it('should return whether there are changes filtered by a regexp', () => {
         const proxy = Sakota.create({ a: 10, b: 20, c: 30 });
         proxy.a = 1000;
         expect(proxy.__sakota__.hasChanges(/a/)).toEqual(true);
-      });
-
-      it('should return false if no changes are available after filtering', () => {
-        const proxy = Sakota.create({ a: 10, b: 20, c: 30 });
-        proxy.a = 1000;
         expect(proxy.__sakota__.hasChanges(/c/)).toEqual(false);
       });
     });
