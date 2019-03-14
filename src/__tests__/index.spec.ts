@@ -283,6 +283,15 @@ describe('Sakota', () => {
           }
         }
       });
+
+      it('should clone the proxy without any applied changes', () => {
+        const proxy = Sakota.create(c.target);
+        for (let i = 0; i < c.action.length; ++i) {
+          c.action[i](proxy);
+        }
+        const clone = proxy.__sakota__.cloneProxy();
+        expect(clone.__sakota__.getChanges()).toEqual({});
+      });
     });
   });
 

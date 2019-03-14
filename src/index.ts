@@ -184,6 +184,13 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
   // --------------
 
   /**
+   * Create a clone of Sakota proxy. This does not include any changes.
+   */
+  public cloneProxy(): Proxied<T> {
+    return Sakota.create(this.target);
+  }
+
+  /**
    * Returns a boolean indicating whether the proxy has any changes.
    */
   public getTarget(): T {
@@ -284,7 +291,7 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
    * Filters properties in the changes object by key.
    */
   private filterChanges(changes: Partial<Changes>, pattern: string | RegExp): Partial<Changes> {
-    const regexp = (pattern instanceof RegExp) ? pattern : new RegExp(pattern);
+    const regexp = pattern instanceof RegExp ? pattern : new RegExp(pattern);
     const filtered: Partial<Changes> = {};
     for (const opkey in changes) {
       if (!(changes as any)[opkey]) {
