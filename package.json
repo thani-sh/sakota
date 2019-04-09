@@ -5,13 +5,11 @@
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "scripts": {
-    "clean": "rimraf coverage dist",
     "build": "tsc",
     "lint": "prettier --print-width 120 --single-quote --trailing-comma es5 --write \"src/**/*.ts\"",
-    "test": "karma start karma.conf.js --single-run",
-    "test:watch": "karma start karma.conf.js",
-    "test:cover": "npm run test && open coverage/index.html",
-    "prepublish": "npm run clean && npm run lint && npm run build"
+    "test": "jest --coverage",
+    "test:watch": "jest --watch --coverage",
+    "prepublish": "npm run lint && npm run build"
   },
   "author": "Muhammed Thanish <mnmtanish@gmail.com> (http://thanish.me/)",
   "license": "MIT",
