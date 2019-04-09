@@ -4,5 +4,5 @@ dist/__tests.*
 coverage
 .circleci
 
-krama.conf.js
+karma.conf.js
 tsconfig.json

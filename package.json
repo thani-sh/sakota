@@ -7,8 +7,8 @@
   "scripts": {
     "build": "tsc",
     "lint": "prettier --print-width 120 --single-quote --trailing-comma es5 --write \"src/**/*.ts\"",
-    "test": "jest --coverage",
-    "test:watch": "jest --watch --coverage",
+    "test": "karma start karma.conf.js --single-run",
+    "test:watch": "karma start karma.conf.js",
     "prepublish": "npm run lint && npm run build"
   },
   "author": "Muhammed Thanish <mnmtanish@gmail.com> (http://thanish.me/)",
