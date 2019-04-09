@@ -1,6 +1,6 @@
 {
   "name": "@creately/sakota",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Proxies js objects and records all changes made on an object without modifying the object.",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
