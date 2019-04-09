@@ -175,7 +175,7 @@ describe('Sakota', () => {
       action: (obj: any) => {
         obj.x = val;
         obj.y = val;
-        obj.__sakota__.reset( 'y' );
+        obj.__sakota__.reset('y');
       },
       result: { x: val },
       change: {
@@ -194,7 +194,7 @@ describe('Sakota', () => {
         obj.z = val;
       },
       result: { z: val },
-      change: { $set: { z: val }},
+      change: { $set: { z: val } },
     })),
 
     // modify the object and check result multiple times

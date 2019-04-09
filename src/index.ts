@@ -224,13 +224,13 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
   /**
    * Resets changes recorded in the proxy. Can be filtered by key name.
    */
-  public reset( key?: string ): void {
-    if ( key === undefined ) {
+  public reset(key?: string): void {
+    if (key === undefined) {
       this.kids = {};
       this.diff = { $set: {}, $unset: {} };
     } else {
       delete this.kids[key];
-      if ( this.diff ) {
+      if (this.diff) {
         delete this.diff.$set[key];
         delete this.diff.$unset[key];
       }
