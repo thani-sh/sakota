@@ -168,6 +168,35 @@ describe('Sakota', () => {
       change: {},
     }),
 
+    // resetting a value on the proxy by it's key
+    // ------------------------------------------
+    ...values().map(val => () => ({
+      target: {},
+      action: (obj: any) => {
+        obj.x = val;
+        obj.y = val;
+        obj.__sakota__.reset( 'y' );
+      },
+      result: { x: val },
+      change: {
+        $set: { x: val },
+      },
+    })),
+
+    // resetting all recorded values on the proxy
+    // ------------------------------------------
+    ...values().map(val => () => ({
+      target: {},
+      action: (obj: any) => {
+        obj.x = val;
+        obj.y = val;
+        obj.__sakota__.reset();
+        obj.z = val;
+      },
+      result: { z: val },
+      change: { $set: { z: val }},
+    })),
+
     // modify the object and check result multiple times
     // -------------------------------------------------
     () => ({
