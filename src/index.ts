@@ -128,9 +128,6 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
     if (typeof value === 'object') {
       return this.getKid(key, value);
     }
-    if (typeof value === 'function') {
-      return value.bind(this.proxy);
-    }
     return value;
   }
 
