@@ -271,9 +271,6 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
    * Returns the getter function of a property if available. Checks prototypes as well.
    */
   private getGetterFunction(obj: any, key: KeyType): Function | null {
-    // if (obj.__lookupGetter__) {
-    //   return obj.__lookupGetter__[key];
-    // }
     for (let p = obj; p; p = Object.getPrototypeOf(p)) {
       const desc = Object.getOwnPropertyDescriptor(p, key);
       if (desc) {
