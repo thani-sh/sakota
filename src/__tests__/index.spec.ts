@@ -197,6 +197,172 @@ describe('Sakota', () => {
       change: { $set: { z: val } },
     })),
 
+    // getting a value using getter functions in target
+    // ------------------------------------------------
+    () => ({
+      target: {
+        x: 1,
+        y: 2,
+        get d() {
+          return this.x + this.y;
+        },
+      },
+      action: (obj: any) => {
+        obj.x = 10;
+      },
+      result: { x: 10, y: 2, d: 12 },
+      change: {
+        $set: { x: 10 },
+      },
+    }),
+
+    // getting a value using getter functions in target (nested)
+    // ---------------------------------------------------------
+    () => ({
+      target: {
+        t: {
+          x: 1,
+          y: 2,
+          get d() {
+            return this.x + this.y;
+          },
+        },
+      },
+      action: (obj: any) => {
+        obj.t.x = 10;
+      },
+      result: { t: { x: 10, y: 2, d: 12 } },
+      change: {
+        $set: { 't.x': 10 },
+      },
+    }),
+
+    // getting a value using getter functions in prototype
+    // ---------------------------------------------------
+    () => ({
+      target: new class {
+        x = 1;
+        y = 2;
+        get d() {
+          return this.x + this.y;
+        }
+      }(),
+      action: (obj: any) => {
+        obj.x = 10;
+        expect(obj.d).toEqual(12);
+      },
+      result: { x: 10, y: 2 },
+      change: {
+        $set: { x: 10 },
+      },
+    }),
+
+    // getting a value using getter functions in prototype (nested)
+    // ------------------------------------------------------------
+    () => ({
+      target: {
+        t: new class {
+          x = 1;
+          y = 2;
+          get d() {
+            return this.x + this.y;
+          }
+        }(),
+      },
+      action: (obj: any) => {
+        obj.t.x = 10;
+        expect(obj.t.d).toEqual(12);
+      },
+      result: { t: { x: 10, y: 2 } },
+      change: {
+        $set: { 't.x': 10 },
+      },
+    }),
+
+    // getting a value using method functions in target
+    // ------------------------------------------------
+    () => ({
+      target: {
+        x: 1,
+        y: 2,
+        getD() {
+          return this.x + this.y;
+        },
+      },
+      action: (obj: any) => {
+        obj.x = 10;
+        expect(obj.getD()).toEqual(12);
+      },
+      result: { x: 10, y: 2, getD: jasmine.any(Function) },
+      change: {
+        $set: { x: 10 },
+      },
+    }),
+
+    // getting a value using method functions in target (nested)
+    // ---------------------------------------------------------
+    () => ({
+      target: {
+        t: {
+          x: 1,
+          y: 2,
+          getD() {
+            return this.x + this.y;
+          },
+        },
+      },
+      action: (obj: any) => {
+        obj.t.x = 10;
+        expect(obj.t.getD()).toEqual(12);
+      },
+      result: { t: { x: 10, y: 2, getD: jasmine.any(Function) } },
+      change: {
+        $set: { 't.x': 10 },
+      },
+    }),
+
+    // getting a value using method functions in prototype
+    // ---------------------------------------------------
+    () => ({
+      target: new class {
+        x = 1;
+        y = 2;
+        public getD() {
+          return this.x + this.y;
+        }
+      }(),
+      action: (obj: any) => {
+        obj.x = 10;
+        expect(obj.getD()).toEqual(12);
+      },
+      result: { x: 10, y: 2 },
+      change: {
+        $set: { x: 10 },
+      },
+    }),
+
+    // getting a value using method functions in prototype (nested)
+    // ------------------------------------------------------------
+    () => ({
+      target: {
+        t: new class {
+          x = 1;
+          y = 2;
+          public getD() {
+            return this.x + this.y;
+          }
+        }(),
+      },
+      action: (obj: any) => {
+        obj.t.x = 10;
+        expect(obj.t.getD()).toEqual(12);
+      },
+      result: { t: { x: 10, y: 2 } },
+      change: {
+        $set: { 't.x': 10 },
+      },
+    }),
+
     // modify the object and check result multiple times
     // -------------------------------------------------
     () => ({

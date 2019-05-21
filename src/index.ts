@@ -29,9 +29,20 @@ type KeyType = string | number | symbol;
 export class Sakota<T extends object> implements ProxyHandler<T> {
   /**
    * Wraps the given object with a Sakota proxy and returns it.
+   * This is the public function used to create
    */
   public static create<T extends object>(obj: T): Proxied<T> {
-    return new Proxy(obj, new Sakota(obj)) as Proxied<T>;
+    return Sakota._create(obj, null);
+  }
+
+  /**
+   *
+   */
+  private static _create<T extends object>(obj: T, parent: Sakota<any> | null): Proxied<T> {
+    const agent = new Sakota(obj, parent);
+    const proxy = new Proxy(obj, agent) as Proxied<T>;
+    agent.proxy = proxy;
+    return proxy;
   }
 
   /**
@@ -59,9 +70,14 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
   private changes: { [prefix: string]: Partial<Changes> | null };
 
   /**
+   * The proxied value. This property should be set imemdiately after constructor
+   */
+  private proxy!: Proxied<T>;
+
+  /**
    * Initialize!
    */
-  private constructor(private target: T, private parent: Sakota<any> | null = null) {
+  private constructor(private target: T, private parent: Sakota<any> | null) {
     this.kids = {};
     this.diff = null;
     this.changed = false;
@@ -101,11 +117,21 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
         return this.diff.$set[key as any];
       }
     }
-    const val = obj[key];
-    if (!val || typeof val !== 'object') {
-      return val;
+    const getter = this.getGetterFunction(obj, key);
+    if (getter) {
+      return getter.call(this.proxy);
     }
-    return this.getKid(key, val);
+    const value = obj[key];
+    if (!value) {
+      return value;
+    }
+    if (typeof value === 'object') {
+      return this.getKid(key, value);
+    }
+    if (typeof value === 'function') {
+      return value.bind(this.proxy);
+    }
+    return value;
   }
 
   /**
@@ -242,6 +268,22 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
   // ---------------
 
   /**
+   * Returns the getter function of a property if available. Checks prototypes as well.
+   */
+  private getGetterFunction(obj: any, key: KeyType): Function | null {
+    // if (obj.__lookupGetter__) {
+    //   return obj.__lookupGetter__[key];
+    // }
+    for (let p = obj; p; p = Object.getPrototypeOf(p)) {
+      const desc = Object.getOwnPropertyDescriptor(p, key);
+      if (desc) {
+        return desc.get || null;
+      }
+    }
+    return null;
+  }
+
+  /**
    * Marks the proxy and all proxies in it's parent chain as changed.
    */
   private onChange(): void {
@@ -260,8 +302,8 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
     if (cached) {
       return cached;
     }
-    const agent = new Sakota(obj, this);
-    const proxy = (this.kids[key] = new Proxy(obj, agent));
+    const proxy = Sakota._create(obj, this);
+    this.kids[key] = proxy;
     return proxy;
   }
 
