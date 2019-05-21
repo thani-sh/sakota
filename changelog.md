@@ -1,3 +1,18 @@
+# 2019-05-21 - v2.4.0
+
+ - Add support for javascript getters, previously it used to get called using original values.
+
+```ts
+const proxy = Sakota.create({
+    x: 1,
+    get xx() {
+        return Math.pow(this.x, 2);
+    },
+})
+proxy.x = 10;
+console.log(proxy.xx) // 100
+```
+
 # 2019-03-14 - v2.3.0
 
  - Add a method `cloneProxy` to clone a sakota proxy.
