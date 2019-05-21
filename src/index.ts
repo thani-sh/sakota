@@ -29,14 +29,15 @@ type KeyType = string | number | symbol;
 export class Sakota<T extends object> implements ProxyHandler<T> {
   /**
    * Wraps the given object with a Sakota proxy and returns it.
-   * This is the public function used to create
+   * This is the public function used to create the proxies.
    */
   public static create<T extends object>(obj: T): Proxied<T> {
     return Sakota._create(obj, null);
   }
 
   /**
-   *
+   * Wraps the given object with a Sakota proxy and returns it.
+   * Optionally sets the parent proxy agent when creating a new agent.
    */
   private static _create<T extends object>(obj: T, parent: Sakota<any> | null): Proxied<T> {
     const agent = new Sakota(obj, parent);
