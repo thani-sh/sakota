@@ -18,6 +18,19 @@ export const values = () => [
   class {},
 ];
 
+export class Point {
+  constructor(
+    public x = 1,
+    public y = 2,
+  ) {}
+  get d() {
+    return this.x + this.y;
+  }
+  getD() {
+    return this.x + this.y;
+  }
+}
+
 /**
  * Proxies the object to throw when attempted to modify.
  */
@@ -240,18 +253,12 @@ describe('Sakota', () => {
     // getting a value using getter functions in prototype
     // ---------------------------------------------------
     () => ({
-      target: new class {
-        x = 1;
-        y = 2;
-        get d() {
-          return this.x + this.y;
-        }
-      }(),
+      target: new Point(),
       action: (obj: any) => {
         obj.x = 10;
         expect(obj.d).toEqual(12);
       },
-      result: { x: 10, y: 2 },
+      result: new Point(10, 2),
       change: {
         $set: { x: 10 },
       },
@@ -261,19 +268,13 @@ describe('Sakota', () => {
     // ------------------------------------------------------------
     () => ({
       target: {
-        t: new class {
-          x = 1;
-          y = 2;
-          get d() {
-            return this.x + this.y;
-          }
-        }(),
+        t: new Point(),
       },
       action: (obj: any) => {
         obj.t.x = 10;
         expect(obj.t.d).toEqual(12);
       },
-      result: { t: { x: 10, y: 2 } },
+      result: { t: new Point(10, 2) },
       change: {
         $set: { 't.x': 10 },
       },
@@ -324,18 +325,12 @@ describe('Sakota', () => {
     // getting a value using method functions in prototype
     // ---------------------------------------------------
     () => ({
-      target: new class {
-        x = 1;
-        y = 2;
-        public getD() {
-          return this.x + this.y;
-        }
-      }(),
+      target: new Point(),
       action: (obj: any) => {
         obj.x = 10;
         expect(obj.getD()).toEqual(12);
       },
-      result: { x: 10, y: 2 },
+      result: new Point(10, 2),
       change: {
         $set: { x: 10 },
       },
@@ -345,19 +340,13 @@ describe('Sakota', () => {
     // ------------------------------------------------------------
     () => ({
       target: {
-        t: new class {
-          x = 1;
-          y = 2;
-          public getD() {
-            return this.x + this.y;
-          }
-        }(),
+        t: new Point(),
       },
       action: (obj: any) => {
         obj.t.x = 10;
         expect(obj.t.getD()).toEqual(12);
       },
-      result: { t: { x: 10, y: 2 } },
+      result: { t: new Point(10, 2) },
       change: {
         $set: { 't.x': 10 },
       },

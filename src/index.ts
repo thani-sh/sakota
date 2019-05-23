@@ -93,10 +93,10 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
    */
   public has(obj: any, key: string | number | symbol): any {
     if (this.diff) {
-      if (key in this.diff.$unset) {
+      if (this.diff.$unset.hasOwnProperty(key)) {
         return false;
       }
-      if (key in this.diff.$set) {
+      if (this.diff.$set.hasOwnProperty(key)) {
         return true;
       }
     }
@@ -111,10 +111,10 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
       return this;
     }
     if (this.diff) {
-      if (key in this.diff.$unset) {
+      if (this.diff.$unset.hasOwnProperty(key)) {
         return undefined;
       }
-      if (key in this.diff.$set) {
+      if (this.diff.$set.hasOwnProperty(key)) {
         return this.diff.$set[key as any];
       }
     }
@@ -161,10 +161,10 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
       return { configurable: true, enumerable: false, value: this };
     }
     if (this.diff) {
-      if (key in this.diff.$unset) {
+      if (this.diff.$unset.hasOwnProperty(key)) {
         return undefined;
       }
-      if (key in this.diff.$set) {
+      if (this.diff.$set.hasOwnProperty(key)) {
         return { configurable: true, enumerable: true, value: this.diff.$set[key] };
       }
     }
@@ -190,7 +190,7 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
    */
   public deleteProperty(obj: any, key: KeyType): boolean {
     if (!(key in obj)) {
-      if (!this.diff || !this.diff.$set || !(key in this.diff.$set)) {
+      if (!this.diff || !this.diff.$set || !(this.diff.$set.hasOwnProperty(key))) {
         return true;
       }
     }
