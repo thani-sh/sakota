@@ -19,10 +19,7 @@ export const values = () => [
 ];
 
 export class Point {
-  constructor(
-    public x = 1,
-    public y = 2,
-  ) {}
+  constructor(public x = 1, public y = 2) {}
   get d() {
     return this.x + this.y;
   }

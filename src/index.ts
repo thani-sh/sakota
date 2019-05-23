@@ -190,7 +190,7 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
    */
   public deleteProperty(obj: any, key: KeyType): boolean {
     if (!(key in obj)) {
-      if (!this.diff || !this.diff.$set || !(this.diff.$set.hasOwnProperty(key))) {
+      if (!this.diff || !this.diff.$set || !this.diff.$set.hasOwnProperty(key)) {
         return true;
       }
     }
