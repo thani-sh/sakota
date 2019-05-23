@@ -1,3 +1,7 @@
+# 2019-05-23 - v2.4.1
+
+ - Fix an issue where proxied object does not have any methods from `Object.prototype`
+
 # 2019-05-21 - v2.4.0
 
  - Add support for javascript getters, previously it used to get called using original values.
