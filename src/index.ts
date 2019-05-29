@@ -25,6 +25,8 @@ type KeyType = string | number | symbol;
  * SaKota proxies js objects and records all changes made on an object without
  * modifying the given object. Changes made to the object will be recorded in
  * a format similar to MongoDB udpate queries.
+ *
+ * NOTE: assumes the target object does not change and caches certain values.
  */
 export class Sakota<T extends object> implements ProxyHandler<T> {
   /**
@@ -74,6 +76,11 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
    * The proxied value. This property should be set imemdiately after constructor
    */
   private proxy!: Proxied<T>;
+
+  /**
+   * A map of cached property descriptors. Assumes the target object does not change.
+   */
+  private _desc: any = {};
 
   /**
    * Initialize!
@@ -269,12 +276,17 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
    * Returns the getter function of a property if available. Checks prototypes as well.
    */
   private getGetterFunction(obj: any, key: KeyType): Function | null {
+    if (this._desc[key]) {
+      return this._desc[key].get;
+    }
     for (let p = obj; p; p = Object.getPrototypeOf(p)) {
       const desc = Object.getOwnPropertyDescriptor(p, key);
       if (desc) {
+        this._desc[key] = desc;
         return desc.get || null;
       }
     }
+    this._desc[key] = null;
     return null;
   }
 
