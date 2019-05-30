@@ -147,11 +147,17 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
     const keys = Reflect.ownKeys(obj);
     if (this.diff) {
       for (const key in this.diff.$set) {
+        if (!this.diff.$set.hasOwnProperty(key)) {
+          continue;
+        }
         if (keys.indexOf(key) === -1) {
           keys.push(key);
         }
       }
       for (const key in this.diff.$unset) {
+        if (!this.diff.$unset.hasOwnProperty(key)) {
+          continue;
+        }
         const index = keys.indexOf(key);
         if (index !== -1) {
           keys.splice(index, 1);
@@ -344,6 +350,9 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
     const changes: Changes = { $set: {}, $unset: {} };
     if (this.diff) {
       for (const key in this.diff.$set) {
+        if (!this.diff.$set.hasOwnProperty(key)) {
+          continue;
+        }
         if (typeof key === 'symbol') {
           continue;
         }
@@ -351,6 +360,9 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
         changes.$set[keyWithPrefix] = this.diff.$set[key];
       }
       for (const key in this.diff.$unset) {
+        if (!this.diff.$unset.hasOwnProperty(key)) {
+          continue;
+        }
         if (typeof key === 'symbol') {
           continue;
         }
@@ -359,6 +371,9 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
       }
     }
     for (const key in this.kids) {
+      if (!this.kids.hasOwnProperty(key)) {
+        continue;
+      }
       if (typeof key === 'symbol') {
         continue;
       }
@@ -369,6 +384,9 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
       Object.assign(changes.$unset, kidChanges.$unset);
     }
     for (const key in changes) {
+      if (!changes.hasOwnProperty(key)) {
+        continue;
+      }
       if (!Object.keys((changes as any)[key]).length) {
         delete (changes as any)[key];
       }
@@ -383,10 +401,17 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
     const regexp = pattern instanceof RegExp ? pattern : new RegExp(pattern);
     const filtered: Partial<Changes> = {};
     for (const opkey in changes) {
-      if (!(changes as any)[opkey]) {
+      if (!changes.hasOwnProperty(opkey)) {
         continue;
       }
-      for (const key in (changes as any)[opkey]) {
+      const opChanges = (changes as any)[opkey];
+      if (!opChanges) {
+        continue;
+      }
+      for (const key in opChanges) {
+        if (!opChanges.hasOwnProperty(key)) {
+          continue;
+        }
         regexp.lastIndex = 0;
         if (regexp.test(key)) {
           if (!(filtered as any)[opkey]) {
