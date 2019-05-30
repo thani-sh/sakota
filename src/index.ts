@@ -22,9 +22,17 @@ export type Changes = {
 type KeyType = string | number | symbol;
 
 /**
+ * These weakmaps hold caches of property descriptors of objects and getters used by sakota.
+ */
+const $getters = new WeakMap<object, { [key: string]: (() => any) | null }>();
+const $descriptors = new WeakMap<object, { [key: string]: PropertyDescriptor | null }>();
+
+/**
  * SaKota proxies js objects and records all changes made on an object without
  * modifying the given object. Changes made to the object will be recorded in
  * a format similar to MongoDB udpate queries.
+ *
+ * NOTE: assumes the target object does not change and caches certain values.
  */
 export class Sakota<T extends object> implements ProxyHandler<T> {
   /**
@@ -93,10 +101,10 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
    */
   public has(obj: any, key: string | number | symbol): any {
     if (this.diff) {
-      if (this.diff.$unset.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(this.diff.$unset, key)) {
         return false;
       }
-      if (this.diff.$set.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(this.diff.$set, key)) {
         return true;
       }
     }
@@ -111,10 +119,10 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
       return this;
     }
     if (this.diff) {
-      if (this.diff.$unset.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(this.diff.$unset, key)) {
         return undefined;
       }
-      if (this.diff.$set.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(this.diff.$set, key)) {
         return this.diff.$set[key as any];
       }
     }
@@ -139,11 +147,17 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
     const keys = Reflect.ownKeys(obj);
     if (this.diff) {
       for (const key in this.diff.$set) {
+        if (!Object.prototype.hasOwnProperty.call(this.diff.$set, key)) {
+          continue;
+        }
         if (keys.indexOf(key) === -1) {
           keys.push(key);
         }
       }
       for (const key in this.diff.$unset) {
+        if (!Object.prototype.hasOwnProperty.call(this.diff.$unset, key)) {
+          continue;
+        }
         const index = keys.indexOf(key);
         if (index !== -1) {
           keys.splice(index, 1);
@@ -161,10 +175,10 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
       return { configurable: true, enumerable: false, value: this };
     }
     if (this.diff) {
-      if (this.diff.$unset.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(this.diff.$unset, key)) {
         return undefined;
       }
-      if (this.diff.$set.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(this.diff.$set, key)) {
         return { configurable: true, enumerable: true, value: this.diff.$set[key] };
       }
     }
@@ -190,7 +204,7 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
    */
   public deleteProperty(obj: any, key: KeyType): boolean {
     if (!(key in obj)) {
-      if (!this.diff || !this.diff.$set || !this.diff.$set.hasOwnProperty(key)) {
+      if (!this.diff || !this.diff.$set || !Object.prototype.hasOwnProperty.call(this.diff.$set, key)) {
         return true;
       }
     }
@@ -268,14 +282,46 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
   /**
    * Returns the getter function of a property if available. Checks prototypes as well.
    */
-  private getGetterFunction(obj: any, key: KeyType): Function | null {
-    for (let p = obj; p; p = Object.getPrototypeOf(p)) {
-      const desc = Object.getOwnPropertyDescriptor(p, key);
+  private getGetterFunction(obj: any, key: KeyType): (() => any) | null {
+    let gettersMap = $getters.get(obj);
+    if (gettersMap) {
+      // NOTE: hasOwnProperty canm also he available as a value
+      if (Object.prototype.hasOwnProperty.call(gettersMap, key)) {
+        return gettersMap[key as any];
+      }
+    } else {
+      gettersMap = {};
+      $getters.set(obj, gettersMap);
+    }
+    for (let p = obj; p && p !== Object.prototype; p = Object.getPrototypeOf(p)) {
+      const desc = this.getObjPropertyDescriptor(p, key);
       if (desc) {
-        return desc.get || null;
+        const getter = desc.get || null;
+        gettersMap[key as any] = getter;
+        return getter;
       }
     }
+    gettersMap[key as any] = null;
     return null;
+  }
+
+  /**
+   * Returns the property descriptor for an object. Use cached value when available.
+   */
+  private getObjPropertyDescriptor(obj: any, key: any): PropertyDescriptor | null {
+    const cachedDescriptorsMap = $descriptors.get(obj);
+    if (!cachedDescriptorsMap) {
+      const descriptor = Object.getOwnPropertyDescriptor(obj, key) || null;
+      $descriptors.set(obj, { [key]: descriptor });
+      return descriptor;
+    }
+    // NOTE: hasOwnProperty canm also he available as a value
+    if (!Object.prototype.hasOwnProperty.call(cachedDescriptorsMap, key)) {
+      const descriptor = Object.getOwnPropertyDescriptor(obj, key) || null;
+      cachedDescriptorsMap[key] = descriptor;
+      return descriptor;
+    }
+    return cachedDescriptorsMap[key];
   }
 
   /**
@@ -309,6 +355,9 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
     const changes: Changes = { $set: {}, $unset: {} };
     if (this.diff) {
       for (const key in this.diff.$set) {
+        if (!Object.prototype.hasOwnProperty.call(this.diff.$set, key)) {
+          continue;
+        }
         if (typeof key === 'symbol') {
           continue;
         }
@@ -316,6 +365,9 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
         changes.$set[keyWithPrefix] = this.diff.$set[key];
       }
       for (const key in this.diff.$unset) {
+        if (!Object.prototype.hasOwnProperty.call(this.diff.$unset, key)) {
+          continue;
+        }
         if (typeof key === 'symbol') {
           continue;
         }
@@ -324,6 +376,9 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
       }
     }
     for (const key in this.kids) {
+      if (!Object.prototype.hasOwnProperty.call(this.kids, key)) {
+        continue;
+      }
       if (typeof key === 'symbol') {
         continue;
       }
@@ -334,6 +389,9 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
       Object.assign(changes.$unset, kidChanges.$unset);
     }
     for (const key in changes) {
+      if (!Object.prototype.hasOwnProperty.call(changes, key)) {
+        continue;
+      }
       if (!Object.keys((changes as any)[key]).length) {
         delete (changes as any)[key];
       }
@@ -348,10 +406,17 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
     const regexp = pattern instanceof RegExp ? pattern : new RegExp(pattern);
     const filtered: Partial<Changes> = {};
     for (const opkey in changes) {
-      if (!(changes as any)[opkey]) {
+      if (!Object.prototype.hasOwnProperty.call(changes, opkey)) {
         continue;
       }
-      for (const key in (changes as any)[opkey]) {
+      const opChanges = (changes as any)[opkey];
+      if (!opChanges) {
+        continue;
+      }
+      for (const key in opChanges) {
+        if (!Object.prototype.hasOwnProperty.call(opChanges, key)) {
+          continue;
+        }
         regexp.lastIndex = 0;
         if (regexp.test(key)) {
           if (!(filtered as any)[opkey]) {
