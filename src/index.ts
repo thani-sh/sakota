@@ -22,6 +22,12 @@ export type Changes = {
 type KeyType = string | number | symbol;
 
 /**
+ * These weakmaps hold caches of property descriptors of objects and getters used by sakota.
+ */
+const $getters = new WeakMap<object, { [key: string]: (() => any) | null }>();
+const $descriptors = new WeakMap<object, { [key: string]: PropertyDescriptor | null }>();
+
+/**
  * SaKota proxies js objects and records all changes made on an object without
  * modifying the given object. Changes made to the object will be recorded in
  * a format similar to MongoDB udpate queries.
@@ -76,11 +82,6 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
    * The proxied value. This property should be set imemdiately after constructor
    */
   private proxy!: Proxied<T>;
-
-  /**
-   * A map of cached property descriptors. Assumes the target object does not change.
-   */
-  private _desc: any = {};
 
   /**
    * Initialize!
@@ -275,19 +276,41 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
   /**
    * Returns the getter function of a property if available. Checks prototypes as well.
    */
-  private getGetterFunction(obj: any, key: KeyType): Function | null {
-    if (this._desc[key]) {
-      return this._desc[key].get;
+  private getGetterFunction(obj: any, key: KeyType): (() => any) | null {
+    let gettersMap = $getters.get(obj);
+    if ( gettersMap ) {
+      if ( key in gettersMap ) {
+        return gettersMap[key as any];
+      }
+    } else {
+      gettersMap = {}
+      $getters.set(obj, gettersMap);
     }
     for (let p = obj; p; p = Object.getPrototypeOf(p)) {
-      const desc = Object.getOwnPropertyDescriptor(p, key);
+      const desc = this.getObjPropertyDescriptor(p, key);
       if (desc) {
-        this._desc[key] = desc;
-        return desc.get || null;
+        const getter = desc.get || null;
+        gettersMap[key as any] = getter;
+        return getter;
       }
     }
-    this._desc[key] = null;
+    gettersMap[key as any] = null;
     return null;
+  }
+
+  private getObjPropertyDescriptor(obj: any, key: any): PropertyDescriptor | null {
+    const cachedDescriptorsMap = $descriptors.get(obj);
+    if (!cachedDescriptorsMap) {
+      const descriptor = Object.getOwnPropertyDescriptor(obj, key) || null;
+      $descriptors.set(obj, { [key]: descriptor });
+      return descriptor;
+    }
+    if (!(key in cachedDescriptorsMap)) {
+      const descriptor = Object.getOwnPropertyDescriptor(obj, key) || null;
+      cachedDescriptorsMap[key] = descriptor;
+      return descriptor;
+    }
+    return cachedDescriptorsMap[key];
   }
 
   /**
