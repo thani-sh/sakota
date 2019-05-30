@@ -476,6 +476,18 @@ describe('Sakota', () => {
     });
   });
 
+  // Test special cases
+  // ------------------
+
+  describe('hasOwnProperty', () => {
+    it('should return true or false based on available properties', () => {
+      const target = { foo: 'bar' };
+      const proxy = Sakota.create(target);
+      expect(proxy.hasOwnProperty('foo')).toEqual(true);
+      expect(proxy.hasOwnProperty('foo')).toEqual(true);
+    });
+  });
+
   // Test for filtering
   // ------------------
 
