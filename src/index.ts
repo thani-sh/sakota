@@ -278,12 +278,12 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
    */
   private getGetterFunction(obj: any, key: KeyType): (() => any) | null {
     let gettersMap = $getters.get(obj);
-    if ( gettersMap ) {
-      if ( key in gettersMap ) {
+    if (gettersMap) {
+      if (gettersMap.hasOwnProperty(key)) {
         return gettersMap[key as any];
       }
     } else {
-      gettersMap = {}
+      gettersMap = {};
       $getters.set(obj, gettersMap);
     }
     for (let p = obj; p; p = Object.getPrototypeOf(p)) {
@@ -305,7 +305,7 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
       $descriptors.set(obj, { [key]: descriptor });
       return descriptor;
     }
-    if (!(key in cachedDescriptorsMap)) {
+    if (!cachedDescriptorsMap.hasOwnProperty(key)) {
       const descriptor = Object.getOwnPropertyDescriptor(obj, key) || null;
       cachedDescriptorsMap[key] = descriptor;
       return descriptor;
