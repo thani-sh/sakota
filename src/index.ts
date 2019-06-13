@@ -202,8 +202,8 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
    */
   public set(_obj: any, key: KeyType, val: any): boolean {
     if (!Sakota.prodmode) {
-      if (this.hasSakota(val)) {
-        throw new Error('Value is also wrapped in Sakota, unable to set value.');
+      if (this._hasSakota(val)) {
+        console.warn('Sakota: value is also wrapped by Sakota!', { obj: _obj, key, val });
       }
     }
     if (!this.diff) {
@@ -214,36 +214,6 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
     this.diff.$set[key] = val;
     this.onChange();
     return true;
-  }
-
-  /**
-   * Checks whether the value or it's children is proxied with Sakota.
-   */
-  private hasSakota( value: unknown ): boolean {
-    if ( typeof value !== 'object' ) {
-      return false;
-    }
-    if ( value === null ) {
-      return false;
-    }
-    if (( value as any )[GET_SAKOTA]) {
-      return true;
-    }
-    if ( Array.isArray( value )) {
-      for ( const child of value ) {
-        if ( this.hasSakota( child )) {
-          return true;
-        }
-      }
-      return false;
-    }
-    for ( const key in value ) {
-      const child = ( value as any )[key];
-      if ( this.hasSakota( child )) {
-        return true;
-      }
-    }
-    return false;
   }
 
   /**
@@ -474,5 +444,35 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
       }
     }
     return filtered;
+  }
+
+  /**
+   * Checks whether the value or it's children is proxied with Sakota.
+   */
+  private _hasSakota( value: unknown ): boolean {
+    if ( typeof value !== 'object' ) {
+      return false;
+    }
+    if ( value === null ) {
+      return false;
+    }
+    if (( value as any )[GET_SAKOTA]) {
+      return true;
+    }
+    if ( Array.isArray( value )) {
+      for ( const child of value ) {
+        if ( this._hasSakota( child )) {
+          return true;
+        }
+      }
+      return false;
+    }
+    for ( const key in value ) {
+      const child = ( value as any )[key];
+      if ( this._hasSakota( child )) {
+        return true;
+      }
+    }
+    return false;
   }
 }
