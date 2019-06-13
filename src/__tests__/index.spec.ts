@@ -526,4 +526,17 @@ describe('Sakota', () => {
       });
     });
   });
+
+  // Test for proxy as value
+  // -----------------------
+
+  describe( 'filtering proxy values', () => {
+      it( 'should throw an error if the value is also a proxy', () => {
+        const object1 = Sakota.create({ a: { x: 3 }, b: 20, c: 30 });
+        const object2 = Sakota.create({ x: 2 });
+        expect(() => {
+          object1.a = object2;
+        }).toThrow();
+      });
+  });
 });

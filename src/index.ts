@@ -36,6 +36,18 @@ const $descriptors = new WeakMap<object, { [key: string]: PropertyDescriptor | n
  */
 export class Sakota<T extends object> implements ProxyHandler<T> {
   /**
+   * This flag should be set to 'true' to enable optimizations.
+   */
+  private static prodmode = false;
+
+  /**
+   * Makes Sakota work faster by removing dev-only code.
+   */
+  public static enableProdMode(): void {
+    this.prodmode = true;
+  }
+
+  /**
    * Wraps the given object with a Sakota proxy and returns it.
    * This is the public function used to create the proxies.
    */
@@ -189,6 +201,11 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
    * Proxy handler trap for setting a property.
    */
   public set(_obj: any, key: KeyType, val: any): boolean {
+    if (!Sakota.prodmode) {
+      if (this.hasSakota(val)) {
+        throw new Error('Value is also wrapped in Sakota, unable to set value.');
+      }
+    }
     if (!this.diff) {
       this.diff = { $set: {}, $unset: {} };
     }
@@ -197,6 +214,36 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
     this.diff.$set[key] = val;
     this.onChange();
     return true;
+  }
+
+  /**
+   * Checks whether the value or it's children is proxied with Sakota.
+   */
+  private hasSakota( value: unknown ): boolean {
+    if ( typeof value !== 'object' ) {
+      return false;
+    }
+    if ( value === null ) {
+      return false;
+    }
+    if (( value as any )[GET_SAKOTA]) {
+      return true;
+    }
+    if ( Array.isArray( value )) {
+      for ( const child of value ) {
+        if ( this.hasSakota( child )) {
+          return true;
+        }
+      }
+      return false;
+    }
+    for ( const key in value ) {
+      const child = ( value as any )[key];
+      if ( this.hasSakota( child )) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
