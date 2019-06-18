@@ -1,3 +1,8 @@
+# 2019-06-18 - v2.4.2
+
+ - Cache getters and property descriptors using weakmaps to reduce property lookup overhead.
+ - Log a warning message on the console if it tries to set a Sakota wrapped object as value.
+
 # 2019-05-23 - v2.4.1
 
  - Fix an issue where proxied object does not have any methods from `Object.prototype`
