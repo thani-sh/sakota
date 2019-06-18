@@ -449,27 +449,27 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
   /**
    * Checks whether the value or it's children is proxied with Sakota.
    */
-  private _hasSakota( value: unknown ): boolean {
-    if ( typeof value !== 'object' ) {
+  private _hasSakota(value: unknown): boolean {
+    if (typeof value !== 'object') {
       return false;
     }
-    if ( value === null ) {
+    if (value === null) {
       return false;
     }
-    if (( value as any )[GET_SAKOTA]) {
+    if ((value as any)[GET_SAKOTA]) {
       return true;
     }
-    if ( Array.isArray( value )) {
-      for ( const child of value ) {
-        if ( this._hasSakota( child )) {
+    if (Array.isArray(value)) {
+      for (const child of value) {
+        if (this._hasSakota(child)) {
           return true;
         }
       }
       return false;
     }
-    for ( const key in value ) {
-      const child = ( value as any )[key];
-      if ( this._hasSakota( child )) {
+    for (const key in value) {
+      const child = (value as any)[key];
+      if (this._hasSakota(child)) {
         return true;
       }
     }
