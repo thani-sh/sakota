@@ -25,6 +25,7 @@ type KeyType = string | number | symbol;
  * These weakmaps hold caches of property descriptors of objects and getters used by sakota.
  */
 const $getters = new WeakMap<object, { [key: string]: (() => any) | null }>();
+const $setters = new WeakMap<object, { [key: string]: ((val: any) => void) | null }>();
 const $descriptors = new WeakMap<object, { [key: string]: PropertyDescriptor | null }>();
 
 /**
@@ -36,15 +37,33 @@ const $descriptors = new WeakMap<object, { [key: string]: PropertyDescriptor | n
  */
 export class Sakota<T extends object> implements ProxyHandler<T> {
   /**
-   * This flag should be set to 'true' to enable optimizations.
+   * Globally configure how Sakota proxies should behave.
    */
-  private static prodmode = false;
+  private static config = {
+    prodmode: false,
+    esgetter: false,
+    essetter: false,
+  };
 
   /**
    * Makes Sakota work faster by removing dev-only code.
    */
   public static enableProdMode(): void {
-    this.prodmode = true;
+    this.config.prodmode = true;
+  }
+
+  /**
+   * Makes Sakota support javascript getters (expensive!).
+   */
+  public static enableESGetters(): void {
+    this.config.esgetter = true;
+  }
+
+  /**
+   * Makes Sakota support javascript getters (expensive!).
+   */
+  public static enableESSetters(): void {
+    this.config.essetter = true;
   }
 
   /**
@@ -138,9 +157,11 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
         return this.diff.$set[key as any];
       }
     }
-    const getter = this.getGetterFunction(obj, key);
-    if (getter) {
-      return getter.call(this.proxy);
+    if (Sakota.config.esgetter) {
+      const getter = this.getGetterFunction(obj, key);
+      if (getter) {
+        return getter.call(this.proxy);
+      }
     }
     const value = obj[key];
     if (!value) {
@@ -200,10 +221,17 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
   /**
    * Proxy handler trap for setting a property.
    */
-  public set(_obj: any, key: KeyType, val: any): boolean {
-    if (!Sakota.prodmode) {
+  public set(obj: any, key: KeyType, val: any): boolean {
+    if (!Sakota.config.prodmode) {
       if (this._hasSakota(val)) {
-        console.warn('Sakota: value is also wrapped by Sakota!', { obj: _obj, key, val });
+        console.warn('Sakota: value is also wrapped by Sakota!', { obj: obj, key, val });
+      }
+    }
+    if (Sakota.config.essetter) {
+      const setter = this.getSetterFunction(obj, key);
+      if (setter) {
+        setter.call(this.proxy, val);
+        return true;
       }
     }
     if (!this.diff) {
@@ -319,6 +347,32 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
       }
     }
     gettersMap[key as any] = null;
+    return null;
+  }
+
+  /**
+   * Returns the setter function of a property if available. Checks prototypes as well.
+   */
+  private getSetterFunction(obj: any, key: KeyType): ((val: any) => void) | null {
+    let settersMap = $setters.get(obj);
+    if (settersMap) {
+      // NOTE: hasOwnProperty canm also he available as a value
+      if (Object.prototype.hasOwnProperty.call(settersMap, key)) {
+        return settersMap[key as any];
+      }
+    } else {
+      settersMap = {};
+      $setters.set(obj, settersMap);
+    }
+    for (let p = obj; p && p !== Object.prototype; p = Object.getPrototypeOf(p)) {
+      const desc = this.getObjPropertyDescriptor(p, key);
+      if (desc) {
+        const setter = desc.set || null;
+        settersMap[key as any] = setter;
+        return setter;
+      }
+    }
+    settersMap[key as any] = null;
     return null;
   }
 
