@@ -23,7 +23,7 @@ export const values = () => [
 
 export class Point {
   constructor(public x = 1, public y = 2) {}
-  set p(p: { x: number, y: number }) {
+  set p(p: { x: number; y: number }) {
     this.x = p.x;
     this.y = p.y;
   }
@@ -362,7 +362,7 @@ describe('Sakota', () => {
       target: {
         x: 1,
         y: 2,
-        set p(p: { x: number, y: number }) {
+        set p(p: { x: number; y: number }) {
           this.x = p.x;
           this.y = p.y;
         },
@@ -383,7 +383,7 @@ describe('Sakota', () => {
         t: {
           x: 1,
           y: 2,
-          set p(p: { x: number, y: number }) {
+          set p(p: { x: number; y: number }) {
             this.x = p.x;
             this.y = p.y;
           },

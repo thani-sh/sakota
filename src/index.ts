@@ -43,7 +43,7 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
     prodmode: false,
     esgetter: false,
     essetter: false,
-  }
+  };
 
   /**
    * Makes Sakota work faster by removing dev-only code.
