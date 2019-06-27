@@ -483,7 +483,7 @@ describe('Sakota', () => {
         }
       });
 
-      fit('should apply the change on the proxy', () => {
+      it('should apply the change on the proxy', () => {
         const proxy = Sakota.create(c.target);
         for (let i = 0; i < c.action.length; ++i) {
           c.action[i](proxy);
