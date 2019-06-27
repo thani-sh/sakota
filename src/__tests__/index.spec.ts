@@ -1,5 +1,8 @@
 import { Sakota } from '../';
 
+Sakota.enableESGetters();
+Sakota.enableESSetters();
+
 /**
  * Function returns an array of different types of values.
  */
@@ -20,6 +23,10 @@ export const values = () => [
 
 export class Point {
   constructor(public x = 1, public y = 2) {}
+  set p(p: { x: number, y: number }) {
+    this.x = p.x;
+    this.y = p.y;
+  }
   get d() {
     return this.x + this.y;
   }
@@ -349,6 +356,76 @@ describe('Sakota', () => {
       },
     }),
 
+    // setting a value using setter functions in target
+    // ------------------------------------------------
+    () => ({
+      target: {
+        x: 1,
+        y: 2,
+        set p(p: { x: number, y: number }) {
+          this.x = p.x;
+          this.y = p.y;
+        },
+      },
+      action: (obj: any) => {
+        obj.p = { x: 10, y: 20 };
+      },
+      result: { x: 10, y: 20, p: undefined },
+      change: {
+        $set: { x: 10, y: 20 },
+      },
+    }),
+
+    // setting a value using setter functions in target (nested)
+    // ---------------------------------------------------------
+    () => ({
+      target: {
+        t: {
+          x: 1,
+          y: 2,
+          set p(p: { x: number, y: number }) {
+            this.x = p.x;
+            this.y = p.y;
+          },
+        },
+      },
+      action: (obj: any) => {
+        obj.t.p = { x: 10, y: 20 };
+      },
+      result: { t: { x: 10, y: 20, p: undefined } },
+      change: {
+        $set: { 't.x': 10, 't.y': 20 },
+      },
+    }),
+
+    // setting a value using setter functions in prototype
+    // ---------------------------------------------------
+    () => ({
+      target: new Point(),
+      action: (obj: any) => {
+        obj.p = { x: 10, y: 20 };
+      },
+      result: new Point(10, 20),
+      change: {
+        $set: { x: 10, y: 20 },
+      },
+    }),
+
+    // setting a value using setter functions in prototype (nested)
+    // ------------------------------------------------------------
+    () => ({
+      target: {
+        t: new Point(),
+      },
+      action: (obj: any) => {
+        obj.t.p = { x: 10, y: 20 };
+      },
+      result: { t: new Point(10, 20) },
+      change: {
+        $set: { 't.x': 10, 't.y': 20 },
+      },
+    }),
+
     // modify the object and check result multiple times
     // -------------------------------------------------
     () => ({
@@ -406,7 +483,7 @@ describe('Sakota', () => {
         }
       });
 
-      it('should apply the change on the proxy', () => {
+      fit('should apply the change on the proxy', () => {
         const proxy = Sakota.create(c.target);
         for (let i = 0; i < c.action.length; ++i) {
           c.action[i](proxy);
