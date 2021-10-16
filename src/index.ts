@@ -19,7 +19,7 @@ export type Changes = {
 /**
  * Types of object keys supported in js.
  */
-type KeyType = string | number | symbol;
+type KeyType = any;
 
 /**
  * These weakmaps hold caches of property descriptors of objects and getters used by sakota.
@@ -176,7 +176,7 @@ export class Sakota<T extends object> implements ProxyHandler<T> {
   /**
    * Proxy handler trap for `Reflect.ownKeys()`.
    */
-  public ownKeys(obj: any): (KeyType)[] {
+  public ownKeys(obj: any): KeyType[] {
     const keys = Reflect.ownKeys(obj);
     if (this.diff) {
       for (const key in this.diff.$set) {

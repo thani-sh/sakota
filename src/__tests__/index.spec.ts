@@ -40,7 +40,7 @@ export class Point {
  */
 export function freeze<T extends object>(obj: T): T {
   return new Proxy(obj, {
-    get: (o, p: keyof T): any => {
+    get: (o: any, p: any): any => {
       const val = o[p];
       if (val && typeof val === 'object') {
         return freeze(val as any);
@@ -58,7 +58,7 @@ describe('Sakota', () => {
   [
     // setting a new value with an empty target
     // ----------------------------------------
-    ...values().map(val => () => ({
+    ...values().map((val) => () => ({
       target: {},
       action: (obj: any) => {
         obj.x = val;
@@ -71,7 +71,7 @@ describe('Sakota', () => {
 
     // setting a new value when the target is not empty
     // ------------------------------------------------
-    ...values().map(val => () => ({
+    ...values().map((val) => () => ({
       target: { a: 1, b: 2 },
       action: (obj: any) => {
         obj.x = val;
@@ -84,7 +84,7 @@ describe('Sakota', () => {
 
     // modifying an existing value
     // ---------------------------
-    ...values().map(val => () => ({
+    ...values().map((val) => () => ({
       target: { a: 1, b: 2 },
       action: (obj: any) => {
         obj.a = val;
@@ -97,7 +97,7 @@ describe('Sakota', () => {
 
     // deleting an existing property
     // -----------------------------
-    ...values().map(val => () => ({
+    ...values().map((val) => () => ({
       target: { a: 1, b: val },
       action: (obj: any) => {
         delete obj.b;
@@ -121,7 +121,7 @@ describe('Sakota', () => {
 
     // setting a new value in a nested object
     // --------------------------------------
-    ...values().map(val => () => ({
+    ...values().map((val) => () => ({
       target: { a: { b: 1 }, c: { d: { e: 2 } } },
       action: (obj: any) => {
         obj.a.x = val;
@@ -139,7 +139,7 @@ describe('Sakota', () => {
 
     // modifying an existing value in a nested object
     // ----------------------------------------------
-    ...values().map(val => () => ({
+    ...values().map((val) => () => ({
       target: { a: { b: 1 }, c: { d: { e: 2 } } },
       action: (obj: any) => {
         obj.a.b = val;
@@ -157,7 +157,7 @@ describe('Sakota', () => {
 
     // deleting an existing value in a nested object
     // ---------------------------------------------
-    ...values().map(val => () => ({
+    ...values().map((val) => () => ({
       target: { a: { b: val }, c: { d: { e: val } } },
       action: (obj: any) => {
         delete obj.a.b;
@@ -187,7 +187,7 @@ describe('Sakota', () => {
 
     // resetting a value on the proxy by it's key
     // ------------------------------------------
-    ...values().map(val => () => ({
+    ...values().map((val) => () => ({
       target: {},
       action: (obj: any) => {
         obj.x = val;
@@ -202,7 +202,7 @@ describe('Sakota', () => {
 
     // resetting all recorded values on the proxy
     // ------------------------------------------
-    ...values().map(val => () => ({
+    ...values().map((val) => () => ({
       target: {},
       action: (obj: any) => {
         obj.x = val;
@@ -571,7 +571,7 @@ describe('Sakota', () => {
   describe('filtering changes', () => {
     describe('getChanges', () => {
       it('should filter changes with a regexp (string)', () => {
-        const proxy = Sakota.create({ a: 10, b: 20, c: 30 });
+        const proxy = Sakota.create({ a: 10, b: 20, c: 30 as number | undefined });
         proxy.a = 1000;
         delete proxy.c;
         expect(proxy.__sakota__.getChanges('', 'a')).toEqual({ $set: { a: 1000 } });
@@ -579,7 +579,7 @@ describe('Sakota', () => {
       });
 
       it('should filter changes with a regexp', () => {
-        const proxy = Sakota.create({ a: 10, b: 20, c: 30 });
+        const proxy = Sakota.create({ a: 10, b: 20, c: 30 as number | undefined });
         proxy.a = 1000;
         delete proxy.c;
         expect(proxy.__sakota__.getChanges('', /a/)).toEqual({ $set: { a: 1000 } });

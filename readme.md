@@ -4,17 +4,17 @@ SaKota proxies js objects and records all changes made on an object without modi
 
 ## Getting Started
 
-Install @creately/sakota module from npm.
+Install @thani-sh/sakota module from npm.
 
 ```shell
-npm install @creately/sakota
+npm install @thani-sh/sakota
 ```
 
 Wrap an existing object with a proxy and make some changes to the proxied object.
 It should reflect all changes made to the object without modifying the source.
 
 ```js
-import { Sakota } from '@creately/sakota'
+import { Sakota } from '@thani-sh/sakota'
 
 const source = { x: 10, y: 20, c1: { x: 20, y: 30, z: 40 }}
 const proxy = Sakota.create(source);
